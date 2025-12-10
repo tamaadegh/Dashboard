@@ -1,0 +1,6 @@
+{
+    "name": "Stripe",
+    "description": "Plugin to integrate Stripe payment gateway that allows you to accept payments online and in person. the plugin support both payment intent and webhook.",
+    "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Stripe_Logo%2C_revised_2016.svg/512px-Stripe_Logo%2C_revised_2016.svg.png"
+}
+

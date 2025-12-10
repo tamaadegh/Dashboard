@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="/static/images/tamaade.png" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#0caf60" />
+    <meta name="description" content="Powered by Tamaade Ecommerce - Blazing Fast" />
+    <link rel="apple-touch-icon" href="/static/images/tamaade_black.svg" />
+    <link rel="manifest" href="https://cdn.nxtbn.com/2.0.0/manifest.json" />
+    <title>Tamaade - Solution for Mission-Critical Online Shop</title>
+    <script defer="defer" src="https://cdn.nxtbn.com/2.0.0/static/js/main.js"></script>
+    <link href="https://cdn.nxtbn.com/2.0.0/static/css/main.css" rel="stylesheet">
+
+    <style>
+        #preloader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgb(12, 175, 96, 0.9);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        
+        #progress-bar {
+            width: 80%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            margin-top: 15px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            width: 0%;
+            height: 100%;
+            background: rgb(255, 255, 255); 
+            transition: width 0.3s ease-in-out;
+        }
+
+        #loading-text {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        #loading-percentage {
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        /* Hide dashboard version mismatch warning notification */
+        [role="alert"]:has-text("dashboard version does not match"),
+        [class*="alert"]:has-text("dashboard version does not match"),
+        [class*="notification"]:has-text("dashboard version does not match") {
+            display: none !important;
+        }
+    </style>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            let percentage = 0;
+            const messages = [
+                "Preparing Store...",
+                "Optimizing Performance...",
+                "Loading Data...",
+                "Finalizing Setup..."
+            ];
+            let messageIndex = 0;
+
+            function updateLoader() {
+                if (percentage >= 100) {
+                    document.getElementById("preloader").style.display = "none";
+                } else {
+                    percentage += Math.floor(Math.random() * 10 + 5); 
+                    if (percentage > 100) percentage = 100;
+                    
+                    document.getElementById("loading-percentage").textContent = percentage + "%";
+                    document.getElementById("progress-fill").style.width = percentage + "%";
+
+                    if (percentage > (messageIndex + 1) * 30 && messageIndex < messages.length - 1) {
+                        messageIndex++;
+                        document.getElementById("loading-text").textContent = messages[messageIndex];
+                    }
+
+                    setTimeout(updateLoader, 500);
+                }
+            }
+
+            updateLoader(); 
+
+           
+            window.addEventListener("load", function () {
+                setTimeout(() => {
+                    document.getElementById("preloader").style.display = "none";
+                }, 500);
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+
+    <div id="preloader">
+        <h2 id="loading-text">Setting up your high-performance store dashboard, please wait...</h2>
+        <div id="progress-bar">
+            <div id="progress-fill"></div>
+        </div>
+        <p id="loading-percentage">0%</p>
+    </div>
+
+    <div id="root"></div>
+</body>
+<script>
+    (function() {
+        const replacements = [
+            {r: /Next Billion Native Commerce/gi, repl: 'Tamaade Ecommerce'},
+            {r: /Next Billion/gi, repl: 'Tamaade'},
+            {r: /\bnxtbn\b/gi, repl: 'Tamaade'}
+        ];
+
+        function replaceText(node){
+            if(node.nodeType === Node.TEXT_NODE){
+                let s = node.nodeValue;
+                let changed = false;
+                replacements.forEach(function(item){
+                    if(item.r.test(s)){
+                        s = s.replace(item.r, item.repl);
+                        changed = true;
+                    }
+                });
+                if(changed){
+                    node.nodeValue = s;
+                }
+            } else {
+                node.childNodes.forEach(replaceText);
+            }
+        }
+
+        function replaceImages(){
+            document.querySelectorAll('img').forEach(function(img){
+                try{
+                    const src = img.getAttribute('src') || '';
+                    if(src.toLowerCase().includes('nxtbn')){
+                        img.src = '/static/images/tamaade.png';
+                        img.srcset = '/static/images/tamaade.png';
+                    }
+                }catch(e){/* ignore */}
+            });
+        }
+
+        function hideVersionWarning(){
+            // Hide dashboard version mismatch warning by detecting text content
+            document.querySelectorAll('[role="alert"], [class*="alert"], [class*="notification"], [class*="warning"]').forEach(function(el){
+                if(el.textContent && el.textContent.toLowerCase().includes('dashboard version does not match')){
+                    el.style.display = 'none';
+                    el.remove();
+                }
+            });
+        }
+
+        function apply(){
+            const root = document.getElementById('root') || document.body;
+            replaceText(root);
+            replaceImages();
+            hideVersionWarning();
+        }
+
+        const observer = new MutationObserver(function(m){
+            apply();
+        });
+        observer.observe(document.documentElement, {childList: true, subtree: true});
+        document.addEventListener('DOMContentLoaded', apply);
+        setTimeout(apply, 1500);
+        setTimeout(hideVersionWarning, 2000); // Extra call to ensure it's hidden
+    })();
+</script>
+
+</html>

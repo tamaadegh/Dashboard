@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tamaade Admin Setup</title>
+  <style>
+    /* Base styles */
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: linear-gradient(to right, #f4f8fb, #eef2f6);
+      color: #333;
+      margin: 0;
+      padding: 0;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 80px auto;
+      padding: 40px;
+      background-color: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+
+    h1 {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700;
+      font-size: 2.5rem;
+      color: #004d3d;
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 600;
+      font-size: 1.8rem;
+      color: #008f60;
+      margin-bottom: 20px;
+    }
+
+    p {
+      font-family: 'Lato', sans-serif;
+      font-size: 1.125rem;
+      color: #555;
+      margin-bottom: 30px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 14px 30px;
+      background-color: #006f4f;
+      color: #ffffff;
+      font-size: 1.125rem;
+      font-weight: 600;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: background-color 0.3s, transform 0.2s ease;
+    }
+
+    .btn:hover {
+      background-color: #004d3d;
+      transform: translateY(-4px);
+    }
+
+    .upload-container {
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      padding: 30px;
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.05);
+      margin-top: 40px;
+    }
+
+    .upload-container input[type="file"] {
+      padding: 14px;
+      border: 2px solid #006f4f;
+      border-radius: 8px;
+      font-size: 1rem;
+      margin-bottom: 20px;
+    }
+
+    .upload-container small {
+      font-size: 0.9rem;
+      color: #777;
+    }
+
+    .footer {
+      margin-top: 60px;
+      padding: 20px;
+      font-size: 1rem;
+      color: #888;
+      background-color: #f1f1f1;
+      text-align: center;
+    }
+
+    .footer a {
+      color: #006f4f;
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Links section */
+    .footer-links {
+      margin-top: 20px;
+    }
+
+    .footer-links a {
+      margin-right: 20px;
+      font-size: 1rem;
+      color: #006f4f;
+    }
+
+    .footer-links a:hover {
+      text-decoration: underline;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .container {
+        padding: 20px;
+      }
+      h1 {
+        font-size: 2rem;
+      }
+      h2 {
+        font-size: 1.5rem;
+      }
+      p, .upload-container small {
+        font-size: 1rem;
+      }
+    }
+
+
+    /* Messages */
+    .messages {
+      margin: 20px 0;
+    }
+
+    .alert {
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      font-size: 1rem;
+      color: #fff;
+    }
+
+    .alert-success {
+      background-color: #28a745;
+    }
+
+    .alert-error {
+      background-color: #dc3545;
+}
+
+
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    {% if messages %}
+    <div class="messages">
+      {% for message in messages %}
+      <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+
+
+    <h1>Welcome to <a target="_blank" href="https://nxtbn.com/">Tamaade</a> </h1>
+    <h2>Admin Dashboard Setup</h2>
+    <p>To enable the Tamaade Admin Dashboard, upload the <strong>admin-build</strong> file or place it in your project root directory. This step is required to proceed with managing your store efficiently.</p>
+
+    <!-- Upload container -->
+    <form method="POST" enctype="multipart/form-data"  action="/upload-admin/" class="upload-container">
+      {% csrf_token %}
+      <h3>Upload Admin Build</h3>
+      <small>Only .zip file is allowed</small>
+      <input type="file" id="dashboard-upload" name="dashboard-upload" required>
+      <button type="submit" class="btn">Next</button>
+      <p>Don't have the admin build yet? <a href="https://nxtbn.com/source-code-pricing" target="_blank">Download it here</a>.</p>
+    </form>
+
+    <div class="footer">
+      <p>For API documentation, visit: <a href="https://docs.nxtbn.com/" target="_blank">https://docs.nxtbn.com/</a></p>
+      <p><a href="https://github.com/nxtbn-com/nxtbn" target="_blank">Give Tamaade a star</a> | <a href="https://github.com/nxtbn-com/nxtbn" target="_blank">Fork Tamaade</a></p>
+      
+      <!-- New footer links section -->
+      <div class="footer-links">
+        <a href="https://nxtbn.com/help" target="_blank">Help</a>
+        <a href="https://nxtbn.com/contact-us" target="_blank">Contact Us</a>
+        <a href="https://nxtbn.com/report-issue" target="_blank">Report Issue</a>
+      </div>
+      
+      <p>&copy; 2024 Tamaade. All Rights Reserved.</p>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+version: '3.7'
+
+services:
+  backend:
+    image: nxtbn/nxtbn:latest 
+    container_name: nxtbn_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - static_data:/backend/staticfiles
+      - "./dist/media:/backend/media" 
+
+volumes:
+  static_data:
