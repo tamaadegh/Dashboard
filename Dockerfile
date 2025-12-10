@@ -1,4 +1,4 @@
-FROM python:3.10-slim-buster
+FROM python:3.11-slim-bookworm
 
 
 COPY ./Pipfile /Pipfile
@@ -7,11 +7,10 @@ COPY ./Pipfile.lock /Pipfile.lock
 RUN apt-get update --yes --quiet && apt-get install --yes --quiet --no-install-recommends \
     build-essential \
     libpq-dev \
-    libmariadbclient-dev \
     libjpeg62-turbo-dev \
     zlib1g-dev \
     libwebp-dev \
-    netcat \
+    netcat-traditional \
  && rm -rf /var/lib/apt/lists/*
 
 
