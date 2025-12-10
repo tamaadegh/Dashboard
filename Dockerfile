@@ -16,6 +16,9 @@ RUN apt-get update --yes --quiet && apt-get install --yes --quiet --no-install-r
 
 RUN pip install --no-cache-dir -q 'pipenv==2020.11.15' && pipenv install --deploy --system
 
+# Ensure any extras listed in requirements files are installed too (fast fallback)
+COPY ./requirements-simple.txt /tmp/requirements-simple.txt
+RUN pip install --no-cache-dir -r /tmp/requirements-simple.txt || echo "requirements install failed"
 
 RUN mkdir /backend
 COPY ./ /backend
