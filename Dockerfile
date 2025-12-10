@@ -16,8 +16,8 @@ RUN apt-get update --yes --quiet && apt-get install --yes --quiet --no-install-r
 
 RUN pip install --no-cache-dir -q 'pipenv==2020.11.15' && pipenv install --deploy --system
 
-# Explicitly install dj-database-url and imagekitio to ensure they're available
-RUN pip install --no-cache-dir dj-database-url==2.0.0 imagekitio==3.2.1
+# Explicitly install dj-database-url and imagekitio (latest versions)
+RUN pip install --no-cache-dir dj-database-url imagekitio
 
 # Ensure any extras listed in requirements files are installed too (fast fallback)
 COPY ./requirements-simple.txt /tmp/requirements-simple.txt
