@@ -208,8 +208,8 @@ else:
         }
     }
 
-# When test, use sqlute as test DB
-if sys.argv[1] == 'test':
+# When test, use sqlite as test DB
+if len(sys.argv) > 1 and sys.argv[1] == 'test':
     DATABASES['default'] = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),

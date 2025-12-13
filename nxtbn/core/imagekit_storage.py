@@ -1,3 +1,4 @@
+
 """
 Custom storage backend for ImageKit integration.
 Handles media file uploads and serving from ImageKit CDN.
@@ -8,13 +9,6 @@ from django.core.files.storage import Storage
 from django.core.exceptions import ImproperlyConfigured
 
 logger = logging.getLogger(__name__)
-
-try:
-    from imagekitio import ImageKit
-    from imagekitio.exceptions import BadRequestError
-except ImportError:
-    ImageKit = None
-    logger.warning("imagekitio not installed. Install with: pip install imagekitio")
 
 
 class ImageKitStorage(Storage):
@@ -29,10 +23,15 @@ class ImageKitStorage(Storage):
     """
 
     def __init__(self):
-        if not ImageKit:
+        # Import ImageKit here to avoid import errors at module load time
+        try:
+            from imagekitio import ImageKit
+            from imagekitio.exceptions import BadRequestException
+            self.BadRequestException = BadRequestException
+        except ImportError as e:
             raise ImproperlyConfigured(
                 'ImageKit storage requires imagekitio. Install with: pip install imagekitio'
-            )
+            ) from e
         
         self.private_key = getattr(settings, 'IMAGEKIT_PRIVATE_KEY', '')
         self.public_key = getattr(settings, 'IMAGEKIT_PUBLIC_KEY', '')
@@ -62,23 +61,38 @@ class ImageKitStorage(Storage):
     def _save(self, name, content):
         """Upload a file to ImageKit."""
         try:
+            logger.info(f'[_save] Starting upload for: {name}')
+            
             file_data = content.read()
+            logger.info(f'[_save] Read {len(file_data)} bytes from content')
             
             # Upload to ImageKit
+            logger.info(f'[_save] Calling ImageKit upload_file...')
             response = self.client.upload_file(
                 file=file_data,
                 file_name=name,
             )
+            logger.info(f'[_save] upload_file returned: {response}')
             
             logger.info(f'Uploaded {name} to ImageKit: {response.file_id}')
             return response.file_id or name
         
-        except BadRequestError as e:
+        except self.BadRequestException as e:
             logger.error(f'ImageKit upload failed for {name}: {str(e)}')
             raise
         except Exception as e:
             logger.error(f'Unexpected error uploading {name} to ImageKit: {str(e)}')
             raise
+
+    def get_available_name(self, name, max_length=None):
+        """
+        Return a filename that's suitable for use on the target storage system
+        and available for the given file name.
+        
+        For ImageKit, we don't need to check for duplicate files since each upload
+        gets a unique file_id. Just return the name as-is.
+        """
+        return name
 
     def delete(self, name):
         """Delete a file from ImageKit."""
