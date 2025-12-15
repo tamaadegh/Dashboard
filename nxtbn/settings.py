@@ -189,31 +189,23 @@ WSGI_APPLICATION = 'nxtbn.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 
-if get_env_var('DATABASE_NAME', ''):
-    DATABASES = {
+# Database
+DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': get_env_var('DATABASE_NAME', ''),
-        'USER': get_env_var('DATABASE_USER', ''),
-        'PASSWORD': get_env_var('DATABASE_PASSWORD', ''),
-        'HOST': get_env_var('DATABASE_HOST', ''),
-        'PORT': get_env_var('DATABASE_PORT', ''),
-        }
+        'NAME': get_env_var('POSTGRES_DB'),
+        'USER': get_env_var('POSTGRES_USER'),
+        'PASSWORD': get_env_var('POSTGRES_PASSWORD'),
+        'HOST': get_env_var('POSTGRES_HOST'),
+        'PORT': get_env_var('POSTGRES_PORT', default='5432'),
+        'CONN_MAX_AGE': 600,
+        'CONN_HEALTH_CHECKS': True,
+        'OPTIONS': {
+            'sslmode': get_env_var('POSTGRES_SSLMODE', default='disable' if DEBUG else 'prefer'),
+            'connect_timeout': 10,
+        },
     }
-else:
-   DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-        }
-    }
-
-# When test, use sqlite as test DB
-if len(sys.argv) > 1 and sys.argv[1] == 'test':
-    DATABASES['default'] = {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
