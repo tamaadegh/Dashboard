@@ -27,7 +27,7 @@ RUN mkdir /backend
 COPY ./ /backend
 WORKDIR /backend
 
-
+RUN python /backend/scripts/apply_tamaade_logo.py
 
 RUN chmod +x /backend/scripts/entrypoint.sh
 
