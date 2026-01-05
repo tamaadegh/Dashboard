@@ -1,116 +1,52 @@
-# 🚨 Current Status: 500 Error Investigation
+# 🚨 Debugging Status: ImageKit Uploads
 
-## What We Know
+## Current Situation
+1. **Diagnostic Script Works** ✅
+   - Test images are uploading successfully to ImageKit.
+   - This confirms credentials and connectivity are GOOD.
+   - This confirms the `imagekitio` package is working for the script.
 
-- ✅ ImageKit keys are set in production
-- ✅ Diagnostic runs on startup automatically  
-- ❌ Still getting 500 errors when uploading images
-- ⏱️ Request takes ~1.5 seconds before failing
+2. **Dashboard Upload Fails** ❌
+   - User gets 500 error when uploading via Web UI.
+   - Request ID: `GmSkx6DdTheglxPQ5nX1uw`
 
-## What We Need
+## Why the Discrepancy?
+This is likely a **Caching** or **Process Hygiene** issue where the web server (Gunicorn) is either:
+- Running an old version of the code (pre-fix).
+- Using a cached/broken instance of the storage backend.
+- Handling the request data differently than the diagnostic script.
 
-**The actual error message from production logs!**
+## 🛠️ The Fix Attempt (Applied)
 
-Without seeing the logs, we can't know if it's:
-- ImageKit authentication failure
-- Network/connectivity issue
-- File processing error
-- Storage upload failure
-- Something else entirely
+### 1. Exposed Real Error
+I modified `nxtbn/filemanager/api/dashboard/views.py` to catch the 500 error and return it as a **400 Bad Request** with the full error details.
+**Benefit**: You will see the EXACT error message in your browser (Network Tab) instead of a generic "Server Error".
 
-## What I've Added
+### 2. Pinned Stable Version
+I pinned `imagekitio==3.2.0` in `requirements.txt` to ensure stability.
 
-### 1. Enhanced Error Logging
-The view now logs:
-```
-[IMAGE UPLOAD] Starting upload request from user: xxx
-[IMAGE UPLOAD] File name: xxx, size: xxx bytes
-[IMAGE UPLOAD] Upload failed: ErrorType: detailed message
-```
+### 3. Added Resilient Fallbacks
+Updated `imagekit_storage.py` to handle mismatched API parameter names (`public_key` vs `publicKey`).
 
-### 2. Serializer Already Has Logging
-```
-[INFO] Starting image upload: filename.jpg
-[INFO] Read X bytes from uploaded file
-[INFO] Creating main optimized image...
-[ERROR] Image processing failed: actual error
-```
+## 👉 ACTION REQUIRED
 
-### 3. Storage Backend Has Logging
-```
-[_save] Starting upload for: xxx
-[_save] Calling ImageKit upload_file...
-[ERROR] ImageKit upload failed: actual error
-```
+1. **Deploy These Changes**
+   ```bash
+   git add .
+   git commit -m "Add debug view for uploads and pin imagekitio"
+   git push origin main
+   ```
 
-## Next Steps
+2. **Wait for Deployment to Finish** (Ensure Build Cache is cleared if possible).
 
-### Step 1: Check Startup Logs
-Look for the diagnostic output when container starts:
-```
-Verifying image upload system...
-================================================================================
-```
+3. **Try Uploading Again**
+   - Go to Dashboard.
+   - Try to upload an image.
+   - **If it fails**: Open Developer Tools (F12) -> Network -> Click the red `images/` request -> **Response** tab.
+   - **Copy the JSON error message** and share it (or paste it here).
 
-Did all steps show ✓?
-
-### Step 2: Try Upload & Get Error Logs
-1. Try uploading an image
-2. Immediately check logs for the timestamp: **22:50:52 UTC**
-3. Look for `[IMAGE UPLOAD]` or `[ERROR]` or `Traceback`
-
-### Step 3: Share the Error
-Copy the full error traceback and share it here.
-
-It will look like:
-```
-[ERROR] [IMAGE UPLOAD] Upload failed: SomeException: the actual problem
-Traceback (most recent call last):
-  File "...", line X
-    ...
-Exception: Details here
-```
-
-## How to Get Logs
-
-### Railway:
-```bash
-# CLI
-railway logs
-
-# Or Web: Project → Service → Deployments → Latest → Logs
-```
-
-### Render:
-Dashboard → Service → Logs tab
-
-## Possible Issues & Quick Fixes
-
-| Error Message | Fix |
-|---------------|-----|
-| "Invalid authentication" | Re-check API keys match exactly |
-| "File size too large" | Check ImageKit plan limits |
-| "Network error" | Check if ImageKit API is accessible |
-| "Connection timeout" | Increase timeout (already at 120s) |
-| "cannot identify image file" | Should be fixed by our code |
-
-## Files with Enhanced Logging
-
-- ✅ `views.py` - View-level logging
-- ✅ `serializers.py` - Serializer-level logging  
-- ✅ `imagekit_storage.py` - Storage backend logging
-- ✅ Startup diagnostic runs automatically
-
-**Every step is now logged - the error WILL be visible in the logs!**
-
----
-
-## What to Do Right Now
-
-1. **Check startup logs** - Did diagnostic pass?
-2. **Try uploading an image**
-3. **Check error logs** at that timestamp
-4. **Copy full error** and share it
-5. **We'll fix it!** 🎯
-
-The logs will tell us exactly what's failing!
+4. **(Optional) Run Version Check**
+   If you have console access in production:
+   ```bash
+   python nxtbn/check_imagekit_version.py
+   ```

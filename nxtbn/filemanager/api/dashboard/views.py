@@ -50,9 +50,20 @@ class ImageListView(generics.ListCreateAPIView):
             return response
             
         except Exception as e:
-            logger.error(f"[IMAGE UPLOAD] Upload failed: {type(e).__name__}: {str(e)}", exc_info=True)
-            # Re-raise to let DRF handle the response
-            raise
+            import traceback
+            error_details = traceback.format_exc()
+            logger.error(f"[IMAGE UPLOAD] Upload failed: {type(e).__name__}: {str(e)}\n{error_details}")
+            
+            # EMERGENCY DEBUG: Return error details to client
+            return Response(
+                {
+                    "error": "Image Upload Failed",
+                    "exception": str(e),
+                    "type": type(e).__name__,
+                    "detail": error_details
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class ImageDetailView(generics.RetrieveUpdateDestroyAPIView):
