@@ -256,7 +256,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # more details can be found here http://whitenoise.evans.io/en/stable/
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# STATICFILES_STORAGE is deprecated in Django 4.2+ - use STORAGES instead
+# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 
 
@@ -287,8 +288,9 @@ IS_AWS_S3 = (
 )
 
 # Set default file storage based on configuration priority: ImageKit > AWS S3 > Local
+# Determine the backend to use for STORAGES
 if IS_IMAGEKIT:
-    DEFAULT_FILE_STORAGE = 'nxtbn.core.imagekit_storage.ImageKitStorage'
+    STORAGE_BACKEND = 'nxtbn.core.imagekit_storage.ImageKitStorage'
 elif IS_AWS_S3:
     AWS_S3_FILE_OVERWRITE = False
     AWS_S3_CUSTOM_DOMAIN = get_env_var("AWS_S3_CUSTOM_DOMAIN", "")
@@ -296,7 +298,20 @@ elif IS_AWS_S3:
     AWS_DEFAULT_ACL = get_env_var("AWS_DEFAULT_ACL", "public-read")
     AWS_LOCATION = "media"
     AWS_AUTO_CREATE_BUCKET = get_env_var("AWS_AUTO_CREATE_BUCKET", True, var_type=bool)
-    DEFAULT_FILE_STORAGE = 'nxtbn.users.storages.NxtbnS3Storage'
+    STORAGE_BACKEND = 'nxtbn.users.storages.NxtbnS3Storage'
+else:
+    STORAGE_BACKEND = 'django.core.files.storage.FileSystemStorage'
+
+# Django 4.2+ STORAGES configuration (required for Django 4.2+)
+# Note: DEFAULT_FILE_STORAGE is deprecated - use STORAGES instead
+STORAGES = {
+    "default": {
+        "BACKEND": STORAGE_BACKEND,
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 
 AUTHENTICATION_BACKENDS = [

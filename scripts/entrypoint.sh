@@ -17,6 +17,10 @@ python manage.py migrate --noinput
 echo "Collecting static files..."
 python manage.py collectstatic --noinput --clear
 
+# Run image upload diagnostic
+echo "Verifying image upload system..."
+python manage.py diagnose_upload
+
 # Start Gunicorn
 echo "Starting Gunicorn..."
 exec gunicorn nxtbn.wsgi:application --bind :8000 --timeout 120 --workers 3
