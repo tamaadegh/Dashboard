@@ -19,4 +19,4 @@ python manage.py collectstatic --noinput --clear
 
 # Start Gunicorn
 echo "Starting Gunicorn..."
-exec gunicorn nxtbn.wsgi:application --bind :8000
+exec gunicorn nxtbn.wsgi:application --bind :8000 --timeout 120 --workers 3
