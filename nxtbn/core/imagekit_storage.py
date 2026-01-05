@@ -44,15 +44,33 @@ class ImageKitStorage(Storage):
         
         if not all([self.private_key, self.public_key, self.url_endpoint]):
             raise ImproperlyConfigured(
-                'ImageKit storage requires IMAGEKIT_PRIVATE_KEY, '
+                'ImageKit storage requires IMAGEKIT_PRIVATE_KEY, '\
                 'IMAGEKIT_PUBLIC_KEY, and IMAGEKIT_URL_ENDPOINT settings.'
             )
         
-        self.client = ImageKit(
-            private_key=self.private_key,
-            public_key=self.public_key,
-            url_endpoint=self.url_endpoint,
-        )
+        # Try to initialize ImageKit client - handle different API versions
+        try:
+            # Try newer API first (imagekitio >= 4.0.0)
+            self.client = ImageKit(
+                private_key=self.private_key,
+                public_key=self.public_key,
+                url_endpoint=self.url_endpoint,
+            )
+        except TypeError:
+            # Fallback to older API (imagekitio < 4.0.0)
+            # Older versions might use different parameter names
+            try:
+                self.client = ImageKit(
+                    privateKey=self.private_key,
+                    publicKey=self.public_key,
+                    urlEndpoint=self.url_endpoint,
+                )
+            except TypeError:
+                # Last resort: maybe it needs no public_key
+                self.client = ImageKit(
+                    private_key=self.private_key,
+                    url_endpoint=self.url_endpoint,
+                )
 
     def _open(self, name, mode='rb'):
         """Open a file from ImageKit."""
