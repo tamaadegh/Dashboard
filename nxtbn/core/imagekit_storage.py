@@ -78,11 +78,13 @@ class ImageKitStorage(Storage):
             return response.file_id or name
         
         except self.BadRequestException as e:
-            logger.error(f'ImageKit upload failed for {name}: {str(e)}')
-            raise
+            error_msg = f'ImageKit BadRequest: {str(e)}'
+            logger.error(f'ImageKit upload failed for {name}: {error_msg}')
+            raise Exception(error_msg) from e
         except Exception as e:
-            logger.error(f'Unexpected error uploading {name} to ImageKit: {str(e)}')
-            raise
+            error_msg = f'Unexpected ImageKit error for {name}: {str(e)}'
+            logger.error(error_msg)
+            raise Exception(error_msg) from e
 
     def get_available_name(self, name, max_length=None):
         """

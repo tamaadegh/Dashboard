@@ -22,8 +22,17 @@ class ImageSerializer(serializers.ModelSerializer):
 
         # Optimize the image before saving
         if "image" in validated_data:
-            validated_data["image"] = self.optimize_image(validated_data["image"])
-            validated_data["image_xs"] = self.optimize_image(validated_data["image"], max_size_kb=1, format="png", max_dimension=50)
+            original_image = validated_data["image"]
+            
+            # 1. Optimize main image
+            validated_data["image"] = self.optimize_image(original_image)
+            
+            # 2. Reset pointer and optimize thumbnail from original
+            if hasattr(original_image, 'seek'):
+                original_image.seek(0)
+            
+            # Increase max_size_kb from 1 to 10 for better reliability
+            validated_data["image_xs"] = self.optimize_image(original_image, max_size_kb=10, format="png", max_dimension=50)
         
         return super().create(validated_data)
 
