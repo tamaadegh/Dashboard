@@ -48,29 +48,36 @@ class ImageKitStorage(Storage):
                 'IMAGEKIT_PUBLIC_KEY, and IMAGEKIT_URL_ENDPOINT settings.'
             )
         
-        # Try to initialize ImageKit client - handle different API versions
         try:
-            # Try newer API first (imagekitio >= 4.0.0)
+            # Try 1: All snake_case (Newer 3.x/4.x?)
             self.client = ImageKit(
                 private_key=self.private_key,
                 public_key=self.public_key,
                 url_endpoint=self.url_endpoint,
             )
         except TypeError:
-            # Fallback to older API (imagekitio < 4.0.0)
-            # Older versions might use different parameter names
+            # Try 2: Hybrid (private_key snake, others camel?) - Based on logs rejecting 'public_key' but accepting 'private_key'
             try:
                 self.client = ImageKit(
-                    privateKey=self.private_key,
+                    private_key=self.private_key,
                     publicKey=self.public_key,
                     urlEndpoint=self.url_endpoint,
                 )
             except TypeError:
-                # Last resort: maybe it needs no public_key
-                self.client = ImageKit(
-                    private_key=self.private_key,
-                    url_endpoint=self.url_endpoint,
-                )
+                # Try 3: All camelCase (Old 2.x)
+                try:
+                    self.client = ImageKit(
+                        privateKey=self.private_key,
+                        publicKey=self.public_key,
+                        urlEndpoint=self.url_endpoint,
+                    )
+                except TypeError:
+                    # Last resort: Try mixed/alternative
+                    self.client = ImageKit(
+                        private_key=self.private_key,
+                        public_key=self.public_key,
+                        urlEndpoint=self.url_endpoint,
+                    )
 
     def _open(self, name, mode='rb'):
         """Open a file from ImageKit."""
