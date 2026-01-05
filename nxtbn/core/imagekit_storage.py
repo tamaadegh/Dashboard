@@ -72,18 +72,43 @@ class ImageKitStorage(Storage):
                 file=file_data,
                 file_name=name,
             )
-            logger.info(f'[_save] upload_file returned: {response}')
+            logger.info(f'[_save] upload_file returned response type: {type(response)}')
             
-            logger.info(f'Uploaded {name} to ImageKit: {response.file_id}')
-            return response.file_id or name
+            # ImageKit response is an object with attributes, not a dict
+            # The response object has: file_id, name, url, file_path, etc.
+            if hasattr(response, 'response_metadata'):
+                logger.info(f'[_save] Response metadata: {response.response_metadata}')
+            
+            # Extract file_id or file_path for storage reference
+            file_reference = None
+            if hasattr(response, 'file_id'):
+                file_reference = response.file_id
+                logger.info(f'[_save] Using file_id: {file_reference}')
+            elif hasattr(response, 'file_path'):
+                file_reference = response.file_path
+                logger.info(f'[_save] Using file_path: {file_reference}')
+            elif hasattr(response, 'url'):
+                # Extract path from URL as fallback
+                file_reference = response.url.split(self.url_endpoint)[-1].lstrip('/')
+                logger.info(f'[_save] Extracted from URL: {file_reference}')
+            else:
+                file_reference = name
+                logger.warning(f'[_save] Could not extract file reference, using original name: {name}')
+            
+            logger.info(f'Successfully uploaded {name} to ImageKit, reference: {file_reference}')
+            return file_reference
         
         except self.BadRequestException as e:
             error_msg = f'ImageKit BadRequest: {str(e)}'
-            logger.error(f'ImageKit upload failed for {name}: {error_msg}')
+            logger.error(f'ImageKit upload failed for {name}: {error_msg}', exc_info=True)
+            raise Exception(error_msg) from e
+        except AttributeError as e:
+            error_msg = f'ImageKit response parsing error for {name}: {str(e)}'
+            logger.error(error_msg, exc_info=True)
             raise Exception(error_msg) from e
         except Exception as e:
             error_msg = f'Unexpected ImageKit error for {name}: {str(e)}'
-            logger.error(error_msg)
+            logger.error(error_msg, exc_info=True)
             raise Exception(error_msg) from e
 
     def get_available_name(self, name, max_length=None):

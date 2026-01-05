@@ -2,11 +2,13 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from nxtbn import settings
 from nxtbn.filemanager.models import Image, Document
-
+import logging
 
 from PIL import Image as PILImage
 from io import BytesIO
 from django.core.files.base import ContentFile
+
+logger = logging.getLogger(__name__)
 
 
 class ImageSerializer(serializers.ModelSerializer):
@@ -26,10 +28,14 @@ class ImageSerializer(serializers.ModelSerializer):
             original_filename = original_image_file.name
             
             try:
+                logger.info(f"Starting image upload: {original_filename}")
+                
                 # Read the uploaded file into memory once
                 image_data = original_image_file.read()
+                logger.info(f"Read {len(image_data)} bytes from uploaded file")
                 
                 # Create main optimized image
+                logger.info("Creating main optimized image...")
                 validated_data["image"] = self.optimize_image_from_bytes(
                     image_data, 
                     original_filename,
@@ -37,8 +43,10 @@ class ImageSerializer(serializers.ModelSerializer):
                     format="WEBP",
                     max_dimension=800
                 )
+                logger.info("Main image created successfully")
                 
                 # Create thumbnail from the same data
+                logger.info("Creating thumbnail...")
                 validated_data["image_xs"] = self.optimize_image_from_bytes(
                     image_data,
                     original_filename,
@@ -46,9 +54,13 @@ class ImageSerializer(serializers.ModelSerializer):
                     format="png",
                     max_dimension=50
                 )
+                logger.info("Thumbnail created successfully")
+                
             except Exception as e:
+                logger.error(f"Image processing failed: {type(e).__name__}: {str(e)}", exc_info=True)
                 raise serializers.ValidationError(f"Image processing failed: {str(e)}")
         
+        logger.info("Calling super().create() to save to database/storage...")
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
