@@ -61,4 +61,4 @@ vine==5.1.0
 wcwidth==0.2.13
 whitenoise==6.8.2
 dj-database-url
-imagekitio==3.2.1
+imagekitio==3.1.0

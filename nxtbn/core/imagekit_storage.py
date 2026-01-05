@@ -26,8 +26,13 @@ class ImageKitStorage(Storage):
         # Import ImageKit here to avoid import errors at module load time
         try:
             from imagekitio import ImageKit
-            from imagekitio.exceptions import BadRequestException
-            self.BadRequestException = BadRequestException
+            # Try to import BadRequestException, fallback to generic Exception
+            try:
+                from imagekitio.exceptions import BadRequestException
+                self.BadRequestException = BadRequestException
+            except ImportError:
+                # Older versions might not have exceptions module
+                self.BadRequestException = Exception
         except ImportError as e:
             raise ImproperlyConfigured(
                 'ImageKit storage requires imagekitio. Install with: pip install imagekitio'
