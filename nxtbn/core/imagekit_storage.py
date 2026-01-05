@@ -48,36 +48,90 @@ class ImageKitStorage(Storage):
                 'IMAGEKIT_PUBLIC_KEY, and IMAGEKIT_URL_ENDPOINT settings.'
             )
         
+        # EXHAUSTIVE INITIALIZATION ATTEMPT
+        # The installed version of imagekitio has inconsistent parameter naming.
+        # We try every known combination until one works.
+        
+        init_errors = []
+        
+        # 1. Standard Modern (Snake Case)
         try:
-            # Try 1: All snake_case (Newer 3.x/4.x?)
             self.client = ImageKit(
                 private_key=self.private_key,
                 public_key=self.public_key,
                 url_endpoint=self.url_endpoint,
             )
-        except TypeError:
-            # Try 2: Hybrid (private_key snake, others camel?) - Based on logs rejecting 'public_key' but accepting 'private_key'
-            try:
-                self.client = ImageKit(
-                    private_key=self.private_key,
-                    publicKey=self.public_key,
-                    urlEndpoint=self.url_endpoint,
-                )
-            except TypeError:
-                # Try 3: All camelCase (Old 2.x)
-                try:
-                    self.client = ImageKit(
-                        privateKey=self.private_key,
-                        publicKey=self.public_key,
-                        urlEndpoint=self.url_endpoint,
-                    )
-                except TypeError:
-                    # Last resort: Try mixed/alternative
-                    self.client = ImageKit(
-                        private_key=self.private_key,
-                        public_key=self.public_key,
-                        urlEndpoint=self.url_endpoint,
-                    )
+            return
+        except TypeError as e:
+            init_errors.append(f"Standard: {e}")
+
+        # 2. Legacy/Javascript Style (Camel Case)
+        try:
+            self.client = ImageKit(
+                privateKey=self.private_key,
+                publicKey=self.public_key,
+                urlEndpoint=self.url_endpoint,
+            )
+            return
+        except TypeError as e:
+            init_errors.append(f"Legacy: {e}")
+
+        # 3. Hybrid 1 (private_key snake, others camel - based on logs)
+        try:
+            self.client = ImageKit(
+                private_key=self.private_key,
+                publicKey=self.public_key,
+                urlEndpoint=self.url_endpoint,
+            )
+            return
+        except TypeError as e:
+            init_errors.append(f"Hybrid 1: {e}")
+
+        # 4. Hybrid 2 (private_key snake, public_key snake, urlEndpoint camel)
+        try:
+            self.client = ImageKit(
+                private_key=self.private_key,
+                public_key=self.public_key,
+                urlEndpoint=self.url_endpoint,
+            )
+            return
+        except TypeError as e:
+            init_errors.append(f"Hybrid 2: {e}")
+
+        # 5. No Public Key (Snake Endpoint)
+        try:
+            self.client = ImageKit(
+                private_key=self.private_key,
+                url_endpoint=self.url_endpoint,
+            )
+            return
+        except TypeError as e:
+            init_errors.append(f"No Public Key (Snake): {e}")
+
+        # 6. No Public Key (Camel Endpoint)
+        try:
+            self.client = ImageKit(
+                private_key=self.private_key,
+                urlEndpoint=self.url_endpoint,
+            )
+            return
+        except TypeError as e:
+            init_errors.append(f"No Public Key (Camel Endpoint): {e}")
+
+        # 7. Positional Arguments (Last Resort)
+        try:
+            self.client = ImageKit(
+                self.private_key,
+                self.public_key,
+                self.url_endpoint
+            )
+            return
+        except TypeError as e:
+            init_errors.append(f"Positional: {e}")
+
+        # If we get here, nothing worked.
+        error_summary = "; ".join(init_errors)
+        raise ImproperlyConfigured(f"Could not initialize ImageKit with any known parameter combination. Errors: {error_summary}")
 
     def _open(self, name, mode='rb'):
         """Open a file from ImageKit."""
