@@ -127,6 +127,8 @@ HELPING_HAND_APPS = [
     "corsheaders",
     "django_filters",
     'django_celery_beat',
+    'cloudinary_storage',
+    'cloudinary',
 ]
 
 INSTALLED_APPS += LOCAL_APPS + HELPING_HAND_APPS
@@ -261,19 +263,21 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 
-# ImageKit Configuration
-# More details: https://imagekit.io/docs/integration/python
-IMAGEKIT_PRIVATE_KEY = get_env_var("IMAGEKIT_PRIVATE_KEY", "")
-IMAGEKIT_PUBLIC_KEY = get_env_var("IMAGEKIT_PUBLIC_KEY", "")
-IMAGEKIT_URL_ENDPOINT = get_env_var("IMAGEKIT_URL_ENDPOINT", "")
 
-IS_IMAGEKIT = (
-    IMAGEKIT_PRIVATE_KEY and
-    IMAGEKIT_PUBLIC_KEY and
-    IMAGEKIT_URL_ENDPOINT
+# Cloudinary Configuration
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': get_env_var("CLOUDINARY_CLOUD_NAME", ""),
+    'API_KEY': get_env_var("CLOUDINARY_API_KEY", ""),
+    'API_SECRET': get_env_var("CLOUDINARY_API_SECRET", "")
+}
+
+IS_CLOUDINARY = (
+    CLOUDINARY_STORAGE['CLOUD_NAME'] and
+    CLOUDINARY_STORAGE['API_KEY'] and
+    CLOUDINARY_STORAGE['API_SECRET']
 )
 
-# AWS S3 Configuration (fallback if ImageKit not configured)
+# AWS S3 Configuration (fallback if Cloudinary not configured)
 # More details can be found here: https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html
 AWS_ACCESS_KEY_ID = get_env_var("AWS_ACCESS_KEY_ID", "")
 AWS_SECRET_ACCESS_KEY = get_env_var("AWS_SECRET_ACCESS_KEY", "")
@@ -287,10 +291,10 @@ IS_AWS_S3 = (
     AWS_STORAGE_REGION
 )
 
-# Set default file storage based on configuration priority: ImageKit > AWS S3 > Local
+# Set default file storage based on configuration priority: Cloudinary > AWS S3 > Local
 # Determine the backend to use for STORAGES
-if IS_IMAGEKIT:
-    STORAGE_BACKEND = 'nxtbn.core.imagekit_storage.ImageKitStorage'
+if IS_CLOUDINARY:
+    STORAGE_BACKEND = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 elif IS_AWS_S3:
     AWS_S3_FILE_OVERWRITE = False
     AWS_S3_CUSTOM_DOMAIN = get_env_var("AWS_S3_CUSTOM_DOMAIN", "")
