@@ -17,9 +17,6 @@ python manage.py migrate --noinput
 echo "Collecting static files..."
 python manage.py collectstatic --noinput --clear
 
-# Run image upload diagnostic
-echo "Verifying image upload system..."
-python manage.py diagnose_upload
 
 # Start Gunicorn
 echo "Starting Gunicorn..."
