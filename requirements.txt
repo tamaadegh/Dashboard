@@ -63,3 +63,5 @@ whitenoise==6.8.2
 dj-database-url
 cloudinary
 django-cloudinary-storage
+cloudinary
+django-cloudinary-storage
