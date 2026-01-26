@@ -63,3 +63,6 @@ whitenoise==6.8.2
 imagekitio==3.2.1
 python-dotenv==1.0.0
 dj-database-url
+
+cloudinary
+django-cloudinary-storage
