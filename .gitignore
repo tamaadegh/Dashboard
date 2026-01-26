@@ -129,3 +129,6 @@ storefront_openapi.yaml
 celerybeat-schedule.db
 
 admin-build/
+
+
+.env 
