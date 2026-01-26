@@ -1,6 +1,7 @@
 from django.forms import ValidationError
 from django.db.models import Sum, F, Count
-
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -37,6 +38,8 @@ from nxtbn.product.api.dashboard.serializers import (
     TaxClassSerializer,
     SupplierSerializer
 )
+
+
 from nxtbn.tax.models import TaxClass
 from nxtbn.users import UserRole
 
@@ -107,10 +110,18 @@ class ProductFilterMixin:
 
     def get_queryset(self):
         if self.request.query_params.get('ordering', '') in ['total_sales', '-total_sales']:
-            return Product.objects.all().annotate(
+            return Product.objects.all().select_related(
+                'category', 'supplier', 'product_type', 'default_variant', 'tax_class'
+            ).prefetch_related(
+                'variants', 'images', 'tags', 'collections'
+            ).annotate(
                 total_sales=Sum(F('variants__orderlineitems__quantity'))
             )
-        return Product.objects.all().order_by('-created_at')
+        return Product.objects.all().select_related(
+            'category', 'supplier', 'product_type', 'default_variant', 'tax_class'
+        ).prefetch_related(
+            'variants', 'images', 'tags', 'collections'
+        ).order_by('-created_at')
 
 class ProductListView(ProductFilterMixin, generics.ListCreateAPIView):
     permission_classes = (CommonPermissions, )
@@ -169,11 +180,18 @@ class ProductWithVariantView(generics.RetrieveAPIView):
     lookup_field = 'id'
 
 
+
+# ... existing imports ...
+
 class CategoryListView(generics.ListCreateAPIView):
     permission_classes = (CommonPermissions, )
     model = Category
     queryset = Category.objects.filter()
     serializer_class = CategorySerializer
+
+    @method_decorator(cache_page(60 * 5))
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 
 class RecursiveCategoryListView(generics.ListCreateAPIView):
@@ -182,6 +200,10 @@ class RecursiveCategoryListView(generics.ListCreateAPIView):
     queryset = Category.objects.filter(parent=None) # Get only top-level categories
     serializer_class = RecursiveCategorySerializer
     pagination_class = None
+
+    @method_decorator(cache_page(60 * 5))
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 class CategoryByParentView(generics.ListAPIView):
     permission_classes = (CommonPermissions, )
@@ -200,7 +222,7 @@ class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = CategorySerializer
     lookup_field = 'id'
 
-
+# ... (Previous CategoryByParentView and CategoryDetailView remain unchanged) ...
 
 class CollectionViewSet(viewsets.ModelViewSet):
     permission_classes = (CommonPermissions, )
@@ -208,12 +230,14 @@ class CollectionViewSet(viewsets.ModelViewSet):
     pagination_class = None
     queryset = Collection.objects.all()
     serializer_class = CollectionSerializer
-    lookup_field = 'id'
-
-
+    
     def get_queryset(self):
         return Collection.objects.all()
-    
+
+    @method_decorator(cache_page(60 * 60)) # Cache Collections for 1 hour
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
 class ColorViewSet(viewsets.ModelViewSet):
     permission_classes = (CommonPermissions, )
     model = Color
@@ -222,10 +246,12 @@ class ColorViewSet(viewsets.ModelViewSet):
     serializer_class = ColorSerializer
     allowed_methods = ['GET', 'POST', 'DELETE']
 
-
     def get_queryset(self):
         return Color.objects.all()
-    
+
+    @method_decorator(cache_page(60 * 60)) # Cache Colors for 1 hour
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 class ProductTypeViewSet(viewsets.ModelViewSet):
     permission_classes = (CommonPermissions, )
@@ -234,9 +260,12 @@ class ProductTypeViewSet(viewsets.ModelViewSet):
     queryset = ProductType.objects.all()
     serializer_class = ProductTypeSerializer
 
-
     def get_queryset(self):
         return ProductType.objects.all()
+    
+    @method_decorator(cache_page(60 * 60)) # Cache Product Types for 1 hour
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
     
 
 class ProductTagViewSet(viewsets.ModelViewSet):
@@ -278,6 +307,10 @@ class TaxClassView(generics.ListCreateAPIView):
     queryset = TaxClass.objects.all()
     serializer_class = TaxClassSerializer
     pagination_class = None
+
+    @method_decorator(cache_page(60 * 60)) # Cache Tax Classes for 1 hour
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 
 

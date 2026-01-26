@@ -22,13 +22,14 @@ class ImageSerializer(serializers.ModelSerializer):
         validated_data["created_by"] = request.user
         validated_data["last_modified_by"] = request.user
 
-        # Optimize the image before saving
-        if "image" in validated_data:
+        # Optimize the image before saving (ONLY if not using Cloudinary)
+        # Cloudinary handles optimization automatically on their end + we want to save bandwidth/processing time here.
+        if "image" in validated_data and not getattr(settings, 'IS_CLOUDINARY', False):
             original_image_file = validated_data["image"]
             original_filename = original_image_file.name
             
             try:
-                logger.info(f"Starting image upload: {original_filename}")
+                logger.info(f"Starting local image optimization: {original_filename}")
                 
                 # Read the uploaded file into memory once
                 image_data = original_image_file.read()
@@ -60,6 +61,11 @@ class ImageSerializer(serializers.ModelSerializer):
                 logger.error(f"Image processing failed: {type(e).__name__}: {str(e)}", exc_info=True)
                 raise serializers.ValidationError(f"Image processing failed: {str(e)}")
         
+        # If Cloudinary is enabled, just let it upload directly without local PIL processing
+        # This is CRITICAL for speed and to avoid "Broken Pipe" on large files
+        elif "image" in validated_data and getattr(settings, 'IS_CLOUDINARY', False):
+             logger.info("Cloudinary enabled: Skipping local optimization to allow direct fast upload.")
+        
         logger.info("Calling super().create() to save to database/storage...")
         return super().create(validated_data)
 
@@ -67,9 +73,11 @@ class ImageSerializer(serializers.ModelSerializer):
         request = self.context["request"]
         validated_data["last_modified_by"] = request.user
 
-        # Optimize the image if it is being updated
-        if "image" in validated_data:
+        # Optimize the image if it is being updated (ONLY if not using Cloudinary)
+        if "image" in validated_data and not getattr(settings, 'IS_CLOUDINARY', False):
             validated_data["image"] = self.optimize_image(validated_data["image"])
+        elif "image" in validated_data and getattr(settings, 'IS_CLOUDINARY', False):
+             logger.info("Cloudinary enabled: Skipping local optimization for update.")
         
         return super().update(instance, validated_data)
 
