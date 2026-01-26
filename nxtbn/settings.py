@@ -127,6 +127,8 @@ HELPING_HAND_APPS = [
     "corsheaders",
     "django_filters",
     'django_celery_beat',
+    'cloudinary_storage',
+    'cloudinary',
 ]
 
 INSTALLED_APPS += LOCAL_APPS + HELPING_HAND_APPS
@@ -261,19 +263,21 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 
-# ImageKit Configuration
-# More details: https://imagekit.io/docs/integration/python
-IMAGEKIT_PRIVATE_KEY = get_env_var("IMAGEKIT_PRIVATE_KEY", "")
-IMAGEKIT_PUBLIC_KEY = get_env_var("IMAGEKIT_PUBLIC_KEY", "")
-IMAGEKIT_URL_ENDPOINT = get_env_var("IMAGEKIT_URL_ENDPOINT", "")
 
-IS_IMAGEKIT = (
-    IMAGEKIT_PRIVATE_KEY and
-    IMAGEKIT_PUBLIC_KEY and
-    IMAGEKIT_URL_ENDPOINT
+# Cloudinary Configuration
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': get_env_var("CLOUDINARY_CLOUD_NAME", ""),
+    'API_KEY': get_env_var("CLOUDINARY_API_KEY", ""),
+    'API_SECRET': get_env_var("CLOUDINARY_API_SECRET", "")
+}
+
+IS_CLOUDINARY = (
+    CLOUDINARY_STORAGE['CLOUD_NAME'] and
+    CLOUDINARY_STORAGE['API_KEY'] and
+    CLOUDINARY_STORAGE['API_SECRET']
 )
 
-# AWS S3 Configuration (fallback if ImageKit not configured)
+# AWS S3 Configuration (fallback if Cloudinary not configured)
 # More details can be found here: https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html
 AWS_ACCESS_KEY_ID = get_env_var("AWS_ACCESS_KEY_ID", "")
 AWS_SECRET_ACCESS_KEY = get_env_var("AWS_SECRET_ACCESS_KEY", "")
@@ -287,10 +291,10 @@ IS_AWS_S3 = (
     AWS_STORAGE_REGION
 )
 
-# Set default file storage based on configuration priority: ImageKit > AWS S3 > Local
+# Set default file storage based on configuration priority: Cloudinary > AWS S3 > Local
 # Determine the backend to use for STORAGES
-if IS_IMAGEKIT:
-    STORAGE_BACKEND = 'nxtbn.core.imagekit_storage.ImageKitStorage'
+if IS_CLOUDINARY:
+    STORAGE_BACKEND = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 elif IS_AWS_S3:
     AWS_S3_FILE_OVERWRITE = False
     AWS_S3_CUSTOM_DOMAIN = get_env_var("AWS_S3_CUSTOM_DOMAIN", "")
@@ -405,19 +409,45 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_ALWAYS_EAGER = get_env_var("CELERY_TASK_ALWAYS_EAGER", default=False, var_type=bool) # Make it true during test runner or development if you don't want to use message broker like redis or rabiitmq
 
 
+# Test Redis connectivity and fall back gracefully
+def _test_redis_connection(redis_url):
+    """Test if Redis is reachable. Returns True if connected, False otherwise."""
+    if not redis_url or redis_url == "redis://redis:6379/1":
+        return False
+    try:
+        import redis
+        client = redis.from_url(redis_url, socket_connect_timeout=1)
+        client.ping()
+        client.close()
+        return True
+    except Exception:
+        return False
+
+REDIS_AVAILABLE = _test_redis_connection(REDIS_URL) if get_env_var("REDIS_URL", default="") else False
+
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": REDIS_URL,
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-snowflake",
     },
     "generic": {
         "BACKEND": "django.core.cache.backends.memcached.PyMemcacheCache",
         "LOCATION": get_env_var("MEMCACHE_LOCATION", "127.0.0.1:11211"),
     }
 }
-# Default cache backend is dummy/ fallback to dummy cache if no cache backend is configured
-if not get_env_var("REDIS_URL", default=""):
-    CACHES["default"]["BACKEND"] = "django.core.cache.backends.dummy.DummyCache"
+
+# Use Redis if available and configured
+if REDIS_AVAILABLE:
+    CACHES["default"] = {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {
+            "socket_connect_timeout": 2,
+            "socket_timeout": 2,
+        }
+    }
+
+# Fallback for generic cache
 if not get_env_var("MEMCACHE_LOCATION", default=""):
     CACHES["generic"]["BACKEND"] = "django.core.cache.backends.dummy.DummyCache"
 
@@ -454,9 +484,9 @@ NXTBN_JWT_SETTINGS = {
 
 
 # Currency Configuration
-BASE_CURRENCY = get_env_var("BASE_CURRENCY", default="USD")
-ALLOWED_CURRENCIES = get_env_var("ALLOWED_CURRENCIES", default=[], var_type=list)
-IS_MULTI_CURRENCY = get_env_var("IS_MULTI_CURRENCY", default=False, var_type=bool)
+BASE_CURRENCY = get_env_var("BASE_CURRENCY", default="GHS")
+ALLOWED_CURRENCIES = get_env_var("ALLOWED_CURRENCIES", default=["GHS", "USD", "EUR", "GBP", "NGN", "KES", "ZAR", "XOF", "XAF"], var_type=list)
+IS_MULTI_CURRENCY = get_env_var("IS_MULTI_CURRENCY", default=True, var_type=bool)
 STORE_URL = get_env_var("STORE_URL", default="http://localhost:8000")
 RESERVE_STOCK_ON_ORDER = True
 VALIDATE_STOCK_ON_ORDER = True

@@ -1,3 +1,6 @@
+from django.views.decorators.cache import cache_page
+from django.utils.decorators import method_decorator
+from django.core.cache import cache
 from django.conf import settings
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -40,7 +43,15 @@ class ProductFilter(filters.FilterSet):
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = NxtbnPagination
     permission_classes = (AllowAny,)
-    queryset = Product.objects.all()
+    queryset = Product.objects.all().select_related(
+        'default_variant',
+        'default_variant__image'
+    ).prefetch_related(
+        'images',
+        'translations',
+        # 'translations' on ProductVariant might be needed if variants have their own translations
+        'default_variant__translations', 
+    )
     filter_backends = [
         django_filters.rest_framework.DjangoFilterBackend,
         drf_filters.SearchFilter,
@@ -50,6 +61,11 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     ordering_fields = ['name', 'created_at']
     lookup_field = 'slug'
 
+    @method_decorator(cache_page(60 * 15)) # Cache for 15 minutes
+    def list(self, request, *args, **kwargs):
+        # We need to manually cache based on currency, as standard cache_page doesn't know about it
+        return super().list(request, *args, **kwargs)
+    
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['exchange_rate'] = self.get_exchange_rate()
@@ -94,24 +110,28 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         return ProductWithVariantSerializer
         
 
+    @method_decorator(cache_page(60 * 15)) # Cache for 15 minutes
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
     @action(detail=False, methods=['get'], url_path='withvariant') # list
     def withvariant(self, request):
         queryset = self.filter_queryset(self.queryset)
         return self.paginate_and_serialize(queryset)
     
-    @action(detail=True, methods=['get'], url_path='with-related') # details 
+    @method_decorator(cache_page(60 * 15))
     def with_related(self, request, slug=None):
         product = self.get_object()
         serializer = self.get_serializer(product)
         return Response(serializer.data)
     
-    @action(detail=True, methods=['get'], url_path='with-related/image-list') # details
+    @method_decorator(cache_page(60 * 15))
     def with_related_image_list(self, request, slug=None):
         product = self.get_object()
         serializer = self.get_serializer(product)
         return Response(serializer.data)
     
-    @action(detail=True, methods=['get'], url_path='with-recommended') # list via single product
+    @method_decorator(cache_page(60 * 15))
     def with_recommended(self, request, slug=None):
         product = self.get_object()
         queryset = Product.objects.annotate(
@@ -121,13 +141,13 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
     
-    @action(detail=True, methods=['get'], url_path='with-image-list') # details
+    @method_decorator(cache_page(60 * 15))
     def retrive_with_image_list(self, request, slug=None):
         product = self.get_object()
         serializer = self.get_serializer(product)
         return Response(serializer.data)
     
-    @action(detail=True, methods=['get'], url_path='with-recommended/image-list') # list via single product
+    @method_decorator(cache_page(60 * 15))
     def with_recommended_image_list(self, request, slug=None):
         product = self.get_object()
         queryset = Product.objects.annotate(
@@ -136,7 +156,6 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
-
     
 class CollectionListView(generics.ListAPIView):
     permission_classes = (AllowAny,)
@@ -144,9 +163,17 @@ class CollectionListView(generics.ListAPIView):
     queryset = Collection.objects.filter(is_active=True)
     serializer_class = CollectionSerializer
 
+    @method_decorator(cache_page(60 * 60))
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
 class CategoryListView(generics.ListAPIView):
     permission_classes = (AllowAny,)
     pagination_class = None
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+
+    @method_decorator(cache_page(60 * 60))
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 

@@ -80,14 +80,17 @@ class ProductWithDefaultVariantSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if settings.USE_I18N:
             if settings.LANGUAGE_CODE != get_language():
-                # Try fetching translation for the requested language
-                translation_obj = obj.translations.filter(language_code=get_language()).first()
+                # Efficiently check prefetched translations
+                # Assumes 'translations' is prefetched in the ViewSet
+                translations = [t for t in obj.translations.all() if t.language_code == get_language()]
+                translation_obj = translations[0] if translations else None
+                
                 if translation_obj:
                     return {
                         'name': translation_obj.name,
                         'summary': translation_obj.summary,
                     }
-                # If no translation exists, fallback to default # TODO (could be logged for debugging)
+                # If no translation exists, fallback to default
                 return {
                     'name': obj.name,
                     'summary': obj.summary,
@@ -117,14 +120,16 @@ class ProductWithDefaultVariantImageListSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if settings.USE_I18N:
             if settings.LANGUAGE_CODE != get_language():
-                # Try fetching translation for the requested language
-                translation_obj = obj.translations.filter(language_code=get_language()).first()
+                # Efficiently check prefetched translations
+                translations = [t for t in obj.translations.all() if t.language_code == get_language()]
+                translation_obj = translations[0] if translations else None
+                
                 if translation_obj:
                     return {
                         'name': translation_obj.name,
                         'summary': translation_obj.summary,
                     }
-                # If no translation exists, fallback to default # TODO (could be logged for debugging)
+                # If no translation exists, fallback to default
                 return {
                     'name': obj.name,
                     'summary': obj.summary,
@@ -146,13 +151,15 @@ class ProductSlugSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if settings.USE_I18N:
             if settings.LANGUAGE_CODE != get_language():
-                # Try fetching translation for the requested language
-                translation_obj = obj.translations.filter(language_code=get_language()).first()
+                # Efficiently check prefetched translations
+                translations = [t for t in obj.translations.all() if t.language_code == get_language()]
+                translation_obj = translations[0] if translations else None
+                
                 if translation_obj:
                     return {
                         'name': translation_obj.name,
                     }
-                # If no translation exists, fallback to default # TODO (could be logged for debugging)
+                # If no translation exists, fallback to default
                 return {
                     'name': obj.name,
                 }
@@ -188,8 +195,10 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if settings.USE_I18N:
             if settings.LANGUAGE_CODE != get_language():
-                # Try fetching translation for the requested language
-                translation_obj = obj.translations.filter(language_code=get_language()).first()
+                # Efficiently check prefetched translations
+                translations = [t for t in obj.translations.all() if t.language_code == get_language()]
+                translation_obj = translations[0] if translations else None
+                
                 if translation_obj:
                     return {
                         'name': translation_obj.name,
@@ -198,7 +207,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
                         'meta_title': translation_obj.meta_title,
                         'meta_description': translation_obj.meta_description,
                     }
-                # If no translation exists, fallback to default # TODO (could be logged for debugging)
+                # If no translation exists, fallback to default
                 return {
                     'name': obj.name,
                     'summary': obj.summary,
@@ -239,8 +248,10 @@ class ProductDetailImageListSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if settings.USE_I18N:
             if settings.LANGUAGE_CODE != get_language():
-                # Try fetching translation for the requested language
-                translation_obj = obj.translations.filter(language_code=get_language()).first()
+                # Efficiently check prefetched translations
+                translations = [t for t in obj.translations.all() if t.language_code == get_language()]
+                translation_obj = translations[0] if translations else None
+                
                 if translation_obj:
                     return {
                         'name': translation_obj.name,
@@ -249,7 +260,7 @@ class ProductDetailImageListSerializer(serializers.ModelSerializer):
                         'meta_title': translation_obj.meta_title,
                         'meta_description': translation_obj.meta_description,
                     }
-                # If no translation exists, fallback to default # TODO (could be logged for debugging)
+                # If no translation exists, fallback to default
                 return {
                     'name': obj.name,
                     'summary': obj.summary,
@@ -300,8 +311,10 @@ class ProductDetailWithRelatedLinkMinimalSerializer(serializers.ModelSerializer)
         request = self.context.get('request')
         if settings.USE_I18N:
             if settings.LANGUAGE_CODE != get_language():
-                # Try fetching translation for the requested language
-                translation_obj = obj.translations.filter(language_code=get_language()).first()
+                # Efficiently check prefetched translations
+                translations = [t for t in obj.translations.all() if t.language_code == get_language()]
+                translation_obj = translations[0] if translations else None
+                
                 if translation_obj:
                     return {
                         'name': translation_obj.name,
@@ -310,7 +323,7 @@ class ProductDetailWithRelatedLinkMinimalSerializer(serializers.ModelSerializer)
                         'meta_title': translation_obj.meta_title,
                         'meta_description': translation_obj.meta_description,
                     }
-                # If no translation exists, fallback to default # TODO (could be logged for debugging)
+                # If no translation exists, fallback to default
                 return {
                     'name': obj.name,
                     'summary': obj.summary,
@@ -355,8 +368,10 @@ class ProductDetailWithRelatedLinkImageListMinimalSerializer(serializers.ModelSe
         request = self.context.get('request')
         if settings.USE_I18N:
             if settings.LANGUAGE_CODE != get_language():
-                # Try fetching translation for the requested language
-                translation_obj = obj.translations.filter(language_code=get_language()).first()
+                # Efficiently check prefetched translations
+                translations = [t for t in obj.translations.all() if t.language_code == get_language()]
+                translation_obj = translations[0] if translations else None
+                
                 if translation_obj:
                     return {
                         'name': translation_obj.name,
@@ -365,7 +380,7 @@ class ProductDetailWithRelatedLinkImageListMinimalSerializer(serializers.ModelSe
                         'meta_title': translation_obj.meta_title,
                         'meta_description': translation_obj.meta_description,
                     }
-                # If no translation exists, fallback to default # TODO (could be logged for debugging)
+                # If no translation exists, fallback to default
                 return {
                     'name': obj.name,
                     'summary': obj.summary,

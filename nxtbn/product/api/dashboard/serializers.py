@@ -145,7 +145,7 @@ class ProductSerializer(serializers.ModelSerializer):
         return obj.product_thumbnail(self.context['request'])
     
     def get_total_variant(self, obj):
-        return obj.variants.count()
+        return len(obj.variants.all())
     
 
 
@@ -223,85 +223,115 @@ class ProductMutationSerializer(serializers.ModelSerializer):
         )
     
     def update(self, instance, validated_data):
-        collection = validated_data.pop('collections', [])
-        images = validated_data.pop('images', [])
+        # Extract ManyToMany data first (default to current if not provided to avoid clearing them accidentally)
+        collections_data = validated_data.pop('collections', None)
+        images_data = validated_data.pop('images', None)
+        
+        # Extract nested write-only payloads
         variants_payload = validated_data.pop('variants_payload', [])
-        currency = validated_data.pop('currency', 'USD')
+        variant_to_delete = validated_data.pop('variant_to_delete', [])
+        tags_payload = validated_data.pop('tags_payload', [])
+
+        # Extract ForeignKey data
         category = validated_data.pop('category', None)
         product_type = validated_data.pop('product_type', None)
         related_to = validated_data.pop('related_to', None)
         supplier = validated_data.pop('supplier', None)
-        variant_to_delete = validated_data.pop('variant_to_delete', [])
-        tags_payload = validated_data.pop('tags_payload', [])
         tax_class = validated_data.pop('tax_class', None)
 
         with transaction.atomic():
-            instance.collections.set(collection)
-            instance.images.set(images)
+             # 1. Update simple fields
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+
+            # 2. Update ForeignKeys if provided
             if category:
                 instance.category = category
             if product_type:
                 instance.product_type = product_type
-            if related_to:
-                instance.related_to = related_to
             if supplier:    
                 instance.supplier = supplier
             if tax_class:
                 instance.tax_class = tax_class
+            
+            # Save main instance changes before touching relationships
+            instance.save() 
 
-            for pattr, pvalue in validated_data.items():
-                setattr(instance, pattr, pvalue)
+            # 3. Update ManyToMany Relationships
+            if collections_data is not None:
+                instance.collections.set(collections_data)
+            
+            if images_data is not None:
+                instance.images.set(images_data)
 
+            if related_to is not None:
+                instance.related_to.set(related_to) # related_to is M2M
 
-        
-            # Delete variants
-            for variant_id in variant_to_delete:
-                variant = ProductVariant.objects.get(id=variant_id)
-                if instance.default_variant == variant:
-                    raise serializers.ValidationError({'variant_to_delete': _('The default variant cannot be deleted.')})
-                variant.delete()
+            # 4. Handle Variants Deletion
+            if variant_to_delete:
+                # Validate before delete
+                if instance.default_variant_id in variant_to_delete:
+                     raise serializers.ValidationError({'variant_to_delete': _('The default variant cannot be deleted.')})
+                
+                ProductVariant.objects.filter(id__in=variant_to_delete, product=instance).delete()
 
-            default_variant = None
-
+            # 5. Handle Variants Update/Creation
+            default_variant = None 
+            
             for variant_data in variants_payload:
                 is_default_variant = variant_data.pop('is_default_variant', False)
                 variant_id = variant_data.pop('id', None)
+                
                 if variant_id:
                     # Update existing variant
-                    variant = ProductVariant.objects.get(id=variant_id, product=instance)
-                    for attr, value in variant_data.items():
-                        setattr(variant, attr, value)
-                    variant.save()
+                    variant_obj = ProductVariant.objects.filter(id=variant_id, product=instance).first()
+                    if variant_obj:
+                        for v_attr, v_value in variant_data.items():
+                            setattr(variant_obj, v_attr, v_value)
+                        variant_obj.save()
+                        if is_default_variant:
+                            default_variant = variant_obj
                 else:
                     # Create new variant
-                    ProductVariant.objects.create(product=instance, **variant_data)
+                    # Ensure currency is set (defaults to product logic or settings)
+                    if 'currency' not in variant_data:
+                        variant_data['currency'] = settings.BASE_CURRENCY
 
-                if is_default_variant:
-                    default_variant = variant
+                    new_variant = ProductVariant.objects.create(product=instance, **variant_data)
+                    if is_default_variant:
+                         default_variant = new_variant
 
-            # Ensure a default variant is set
+            # 6. Update Default Variant
             if default_variant:
                 instance.default_variant = default_variant
-            elif not instance.default_variant:
-                raise serializers.ValidationError({'default_variant': _('A default variant must be set.')})
-            
-            if tags_payload:
-                instance.tags.clear()
-                for tag_payload in tags_payload:
-                    tag, _ = ProductTag.objects.get_or_create(name=tag_payload['value'])
-                    instance.tags.add(tag)
+                instance.save(update_fields=['default_variant']) # optimization
+            elif not instance.default_variant and instance.variants.exists():
+                 # Fallback: if no default set but variants exist, pick the first one
+                 instance.default_variant = instance.variants.first()
+                 instance.save(update_fields=['default_variant'])
 
+            # 7. Update Tags
+            if tags_payload is not None: 
+                # If tags_payload is empty list [], it clears tags. If None, it leaves them alone (handled by pop default=[])
+                # However, logic above sets tags_payload default to [], which implies "clear tags if not provided in payload?"
+                # Standard PUT behavior -> replace. PATCH -> partial.
+                # Assuming frontend sends full list of tags on update.
+                
+                current_tags = []
+                for tag_payload in tags_payload:
+                    tag_name = tag_payload.get('value')
+                    if tag_name:
+                        tag, _ = ProductTag.objects.get_or_create(name=tag_name)
+                        current_tags.append(tag)
+                instance.tags.set(current_tags)
+
+            # 8. Update Live Status based on Status
             if instance.status == PublishableStatus.PUBLISHED:
                 instance.is_live = True
             else:
                 instance.is_live = False
-            
-            if tax_class:
-                tax_class_instance = TaxClass.objects.get(id=tax_class.id)
-                if tax_class_instance:
-                    instance.tax_class = tax_class_instance
+            instance.save(update_fields=['is_live', 'status']) # Final save for status
 
-        instance.save()
         return instance
     
 

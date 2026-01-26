@@ -12,17 +12,31 @@ class Image(AbstractBaseModel):
     image_xs = models.ImageField(upload_to='images/xs/', null=True, blank=True)
     image_alt_text = models.CharField(max_length=255)
 
-    def get_image_url(self,request):
+    def get_image_url(self, request):
         if self.image:
-            return request.build_absolute_uri(self.image.url)
+            url = self.image.url
+            # If using Cloudinary, we can return the URL directly (or add transformations)
+            if 'cloudinary.com' in url:
+                return url
+            return request.build_absolute_uri(url)
         return None
 
-    def get_image_xs_url(self,request):
+    def get_image_xs_url(self, request):
         if self.image_xs:
-            return request.build_absolute_uri(self.image_xs.url)
+             url = self.image_xs.url
+             if 'cloudinary.com' in url:
+                return url
+             return request.build_absolute_uri(url)
         
         if self.image:
-            return request.build_absolute_uri(self.image.url)
+            url = self.image.url
+            if 'cloudinary.com' in url:
+                # Cloudinary on-the-fly transformation for thumbnail
+                # Insert /w_200,f_auto,q_auto/ after /upload/
+                if '/upload/' in url:
+                    return url.replace('/upload/', '/upload/w_200,f_auto,q_auto/')
+                return url
+            return request.build_absolute_uri(url)
 
         return None
 

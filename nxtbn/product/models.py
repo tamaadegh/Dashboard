@@ -215,11 +215,18 @@ class Product(PublishableModel, AbstractMetadata, AbstractSEOModel):
         Returns the URL of the first image associated with the product. 
         If no image is available, returns None.
         """
-        first_image = self.images.first()  # Get the first image if it exists
-        if first_image and hasattr(first_image, 'image') and first_image.image:
-            image_url = first_image.image.url
-            full_url = request.build_absolute_uri(image_url)
-            return full_url
+        images = self.images.all()
+        if images and len(images) > 0:
+            first_image = images[0]
+            if hasattr(first_image, 'image') and first_image.image:
+                try:
+                    image_url = first_image.image.url
+                    if 'cloudinary.com' in image_url:
+                        return image_url
+                    full_url = request.build_absolute_uri(image_url)
+                    return full_url
+                except Exception:
+                    return None
         return None
     
     def product_thumbnail_xs(self, request):
@@ -227,25 +234,47 @@ class Product(PublishableModel, AbstractMetadata, AbstractSEOModel):
         Returns the URL of the first image associated with the product. 
         If no image is available, returns None.
         """
-        first_image = self.images.first()  # Get the first image if it exists
-        if first_image and hasattr(first_image, 'image_xs') and first_image.image_xs:
-            image_url = first_image.image_xs.url
-            full_url = request.build_absolute_uri(image_url)
-            return full_url
-        
-        if first_image and hasattr(first_image, 'image') and first_image.image:
-            image_url = first_image.image.url
-            full_url = request.build_absolute_uri(image_url)
-            return full_url
+        images = self.images.all()
+        if images and len(images) > 0:
+            first_image = images[0]
+            if hasattr(first_image, 'image_xs') and first_image.image_xs:
+                try:
+                    image_url = first_image.image_xs.url
+                    if 'cloudinary.com' in image_url:
+                        return image_url
+                    full_url = request.build_absolute_uri(image_url)
+                    return full_url
+                except Exception:
+                    pass
+            
+            # Fallback to smart thumbnail from main image
+            if hasattr(first_image, 'image') and first_image.image:
+                try:
+                    image_url = first_image.image.url
+                    if 'cloudinary.com' in image_url:
+                         if '/upload/' in image_url:
+                            return image_url.replace('/upload/', '/upload/w_200,f_auto,q_auto/')
+                         return image_url
+                    full_url = request.build_absolute_uri(image_url)
+                    return full_url
+                except Exception:
+                    pass
 
         return None
-
 
     
     def product_price_range(self):
         """
         Returns the price range of the product variants.
         """
+        if self.variants.all():
+             prices = [v.price for v in self.variants.all()]
+             if not prices:
+                 return {'min_price': Decimal('0.00'), 'max_price': Decimal('0.00')}
+             return {'min_price': min(prices), 'max_price': max(prices)}
+        
+        # Fallback to DB aggregation if no variants or not prefetched (though .all() always returns list if accessed, 
+        # but if we want to be strict about prefetch we check _result_cache, but .all() is safer for general use here)
         price_range = self.variants.aggregate(min_price=models.Min('price'), max_price=models.Max('price'))
         return price_range
     
@@ -310,7 +339,7 @@ class ProductVariant(MonetaryMixin, AbstractUUIDModel, AbstractMetadata, models.
 
     currency = models.CharField(
         max_length=3,
-        default=CurrencyTypes.USD,
+        default=CurrencyTypes.GHS,
         choices=CurrencyTypes.choices,
     )
     price = models.DecimalField(max_digits=12, decimal_places=3, validators=[MinValueValidator(Decimal('0.01'))])
@@ -392,6 +421,8 @@ class ProductVariant(MonetaryMixin, AbstractUUIDModel, AbstractMetadata, models.
         """
         if self.image and hasattr(self.image, 'image') and self.image.image:
             image_url = self.image.image.url
+            if 'cloudinary.com' in image_url:
+                return image_url
             full_url = request.build_absolute_uri(image_url)
             return full_url
         
@@ -399,6 +430,8 @@ class ProductVariant(MonetaryMixin, AbstractUUIDModel, AbstractMetadata, models.
             first_image = self.product.images.first()
             if first_image and hasattr(first_image, 'image') and first_image.image:
                 image_url = first_image.image.url
+                if 'cloudinary.com' in image_url:
+                     return image_url
                 full_url = request.build_absolute_uri(image_url)
                 return full_url
         return None
@@ -410,13 +443,27 @@ class ProductVariant(MonetaryMixin, AbstractUUIDModel, AbstractMetadata, models.
         """
         if self.image and hasattr(self.image, 'image_xs') and self.image.image_xs:
             image_url = self.image.image_xs.url
+            if 'cloudinary.com' in image_url:
+                return image_url
             full_url = request.build_absolute_uri(image_url)
             return full_url
+        
+        # Fallback to main image with Cloudinary transform
+        if self.image and hasattr(self.image, 'image') and self.image.image:
+             image_url = self.image.image.url
+             if 'cloudinary.com' in image_url:
+                 if '/upload/' in image_url:
+                    return image_url.replace('/upload/', '/upload/w_200,f_auto,q_auto/')
+                 return image_url
         
         if self.product.images.exists():
             first_image = self.product.images.first()
             if first_image and hasattr(first_image, 'image') and first_image.image:
                 image_url = first_image.image.url
+                if 'cloudinary.com' in image_url:
+                     if '/upload/' in image_url:
+                        return image_url.replace('/upload/', '/upload/w_200,f_auto,q_auto/')
+                     return image_url
                 full_url = request.build_absolute_uri(image_url)
                 return full_url
         return None
