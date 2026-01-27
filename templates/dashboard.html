@@ -30,7 +30,7 @@
             font-family: Arial, sans-serif;
             text-align: center;
         }
-        
+
         #progress-bar {
             width: 80%;
             height: 6px;
@@ -43,7 +43,7 @@
         #progress-fill {
             width: 0%;
             height: 100%;
-            background: rgb(255, 255, 255); 
+            background: rgb(255, 255, 255);
             transition: width 0.3s ease-in-out;
         }
 
@@ -64,6 +64,114 @@
         [class*="notification"]:has-text("dashboard version does not match") {
             display: none !important;
         }
+
+        /* Mobile Submit Button Fixes - Critical for Product Publishing */
+        @media (max-width: 768px) {
+
+            /* Ensure all buttons are clickable on mobile */
+            button[type="submit"],
+            button[type="button"],
+            input[type="submit"],
+            .submit-button,
+            [class*="submit"],
+            [class*="Submit"],
+            [class*="publish"],
+            [class*="Publish"] {
+                pointer-events: auto !important;
+                touch-action: manipulation !important;
+                position: relative !important;
+                z-index: 100 !important;
+                min-height: 44px !important;
+                /* iOS minimum touch target */
+                cursor: pointer !important;
+            }
+
+            /* Fix for disabled state - ensure it's visually clear but still in DOM */
+            button[disabled],
+            button:disabled,
+            input[disabled],
+            input:disabled {
+                opacity: 0.6 !important;
+                pointer-events: none !important;
+            }
+
+            /* Ensure form footers/action bars are properly positioned */
+            [class*="footer"],
+            [class*="Footer"],
+            [class*="actions"],
+            [class*="Actions"],
+            [class*="form-actions"] {
+                position: sticky !important;
+                bottom: 0 !important;
+                background: white !important;
+                padding: 15px !important;
+                z-index: 99 !important;
+                box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1) !important;
+            }
+
+            /* Fix for overlapping elements that might block buttons */
+            [class*="overlay"],
+            [class*="Overlay"],
+            [class*="modal"],
+            [class*="Modal"] {
+                z-index: 1000 !important;
+            }
+
+            /* Ensure form containers don't block interactions */
+            form,
+            [class*="form"],
+            [class*="Form"] {
+                position: relative !important;
+                z-index: 1 !important;
+            }
+
+            /* Fix for sticky headers that might overlap */
+            [class*="header"],
+            [class*="Header"],
+            nav,
+            [class*="nav"],
+            [class*="Nav"] {
+                z-index: 98 !important;
+            }
+
+            /* Ensure proper spacing for mobile forms */
+            [class*="form-group"],
+            [class*="FormGroup"],
+            [class*="field"],
+            [class*="Field"] {
+                margin-bottom: 20px !important;
+            }
+
+            /* Fix for button containers */
+            [class*="button-group"],
+            [class*="ButtonGroup"],
+            [class*="btn-group"] {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 10px !important;
+                width: 100% !important;
+            }
+
+            [class*="button-group"] button,
+            [class*="ButtonGroup"] button,
+            [class*="btn-group"] button {
+                width: 100% !important;
+                margin: 0 !important;
+            }
+        }
+
+        /* Additional fixes for very small screens */
+        @media (max-width: 480px) {
+
+            button[type="submit"],
+            button[type="button"],
+            input[type="submit"],
+            .submit-button {
+                font-size: 16px !important;
+                /* Prevent iOS zoom on focus */
+                padding: 12px 20px !important;
+            }
+        }
     </style>
 
     <script>
@@ -81,9 +189,9 @@
                 if (percentage >= 100) {
                     document.getElementById("preloader").style.display = "none";
                 } else {
-                    percentage += Math.floor(Math.random() * 10 + 5); 
+                    percentage += Math.floor(Math.random() * 10 + 5);
                     if (percentage > 100) percentage = 100;
-                    
+
                     document.getElementById("loading-percentage").textContent = percentage + "%";
                     document.getElementById("progress-fill").style.width = percentage + "%";
 
@@ -96,9 +204,9 @@
                 }
             }
 
-            updateLoader(); 
+            updateLoader();
 
-           
+
             window.addEventListener("load", function () {
                 setTimeout(() => {
                     document.getElementById("preloader").style.display = "none";
@@ -122,26 +230,26 @@
     <div id="root"></div>
 </body>
 <script>
-    (function() {
+    (function () {
         const replacements = [
-            {r: /Next Billion Native Commerce/gi, repl: 'Tamaade Ecommerce'},
-            {r: /Next Billion/gi, repl: 'Tamaade'},
-            {r: /\bnxtbn\b/gi, repl: 'Tamaade'},
-            {r: /GH₵\$/gi, repl: 'GH₵'},
-            {r: /GH₵\s*\$/gi, repl: 'GH₵'}
+            { r: /Next Billion Native Commerce/gi, repl: 'Tamaade Ecommerce' },
+            { r: /Next Billion/gi, repl: 'Tamaade' },
+            { r: /\bnxtbn\b/gi, repl: 'Tamaade' },
+            { r: /GH₵\$/gi, repl: 'GH₵' },
+            { r: /GH₵\s*\$/gi, repl: 'GH₵' }
         ];
 
-        function replaceText(node){
-            if(node.nodeType === Node.TEXT_NODE){
+        function replaceText(node) {
+            if (node.nodeType === Node.TEXT_NODE) {
                 let s = node.nodeValue;
                 let changed = false;
-                replacements.forEach(function(item){
-                    if(item.r.test(s)){
+                replacements.forEach(function (item) {
+                    if (item.r.test(s)) {
                         s = s.replace(item.r, item.repl);
                         changed = true;
                     }
                 });
-                if(changed){
+                if (changed) {
                     node.nodeValue = s;
                 }
             } else {
@@ -149,20 +257,20 @@
             }
         }
 
-        function replaceImages(){
-            document.querySelectorAll('img').forEach(function(img){
-                try{
+        function replaceImages() {
+            document.querySelectorAll('img').forEach(function (img) {
+                try {
                     const src = img.getAttribute('src') || '';
-                    if(src.toLowerCase().includes('nxtbn')){
+                    if (src.toLowerCase().includes('nxtbn')) {
                         img.src = '/static/images/tamaade.png';
                         img.srcset = '/static/images/tamaade.png';
                     }
-                }catch(e){/* ignore */}
+                } catch (e) {/* ignore */ }
             });
         }
 
         function cleanInputs() {
-            document.querySelectorAll('input').forEach(function(input) {
+            document.querySelectorAll('input').forEach(function (input) {
                 if (input.placeholder && input.placeholder.includes('$')) {
                     input.placeholder = input.placeholder.replace(/\$/g, '');
                 }
@@ -170,36 +278,95 @@
                 // This helps avoid jumping cursors during typing if possible, 
                 // but since this fixes an initial load issue, it is acceptable.
                 if (input.value && input.value.includes('$')) {
-                     input.value = input.value.replace(/\$/g, '');
+                    input.value = input.value.replace(/\$/g, '');
                 }
             });
         }
 
-        function hideVersionWarning(){
+        function hideVersionWarning() {
             // Hide dashboard version mismatch warning by detecting text content
-            document.querySelectorAll('[role="alert"], [class*="alert"], [class*="notification"], [class*="warning"]').forEach(function(el){
-                if(el.textContent && el.textContent.toLowerCase().includes('dashboard version does not match')){
+            document.querySelectorAll('[role="alert"], [class*="alert"], [class*="notification"], [class*="warning"]').forEach(function (el) {
+                if (el.textContent && el.textContent.toLowerCase().includes('dashboard version does not match')) {
                     el.style.display = 'none';
                     el.remove();
                 }
             });
         }
 
-        function apply(){
+        function fixMobileButtons() {
+            // Fix for mobile submit button issues
+            if (window.innerWidth <= 768) {
+                // Find all submit buttons and ensure they're clickable
+                const buttons = document.querySelectorAll(
+                    'button[type="submit"], button[type="button"], input[type="submit"], ' +
+                    '[class*="submit"], [class*="Submit"], [class*="publish"], [class*="Publish"]'
+                );
+
+                buttons.forEach(function (btn) {
+                    // Remove any conflicting styles
+                    btn.style.pointerEvents = 'auto';
+                    btn.style.touchAction = 'manipulation';
+                    btn.style.position = 'relative';
+                    btn.style.zIndex = '100';
+
+                    // Ensure minimum touch target size for iOS
+                    if (btn.offsetHeight < 44) {
+                        btn.style.minHeight = '44px';
+                    }
+
+                    // Add touch event listeners to ensure responsiveness
+                    if (!btn.hasAttribute('data-mobile-fixed')) {
+                        btn.addEventListener('touchstart', function (e) {
+                            // Prevent any parent elements from blocking the touch
+                            e.stopPropagation();
+                        }, { passive: true });
+
+                        btn.setAttribute('data-mobile-fixed', 'true');
+                    }
+                });
+
+                // Fix form footers/action containers
+                const actionContainers = document.querySelectorAll(
+                    '[class*="footer"], [class*="Footer"], [class*="actions"], ' +
+                    '[class*="Actions"], [class*="form-actions"]'
+                );
+
+                actionContainers.forEach(function (container) {
+                    container.style.position = 'sticky';
+                    container.style.bottom = '0';
+                    container.style.zIndex = '99';
+                    container.style.background = 'white';
+                });
+
+                // Ensure forms don't have conflicting z-index
+                document.querySelectorAll('form').forEach(function (form) {
+                    if (form.style.zIndex && parseInt(form.style.zIndex) > 100) {
+                        form.style.zIndex = '1';
+                    }
+                });
+            }
+        }
+
+        function apply() {
             const root = document.getElementById('root') || document.body;
             replaceText(root);
             replaceImages();
             cleanInputs();
             hideVersionWarning();
+            fixMobileButtons(); // Add mobile button fix
         }
 
-        const observer = new MutationObserver(function(m){
+        const observer = new MutationObserver(function (m) {
             apply();
         });
-        observer.observe(document.documentElement, {childList: true, subtree: true});
+        observer.observe(document.documentElement, { childList: true, subtree: true });
         document.addEventListener('DOMContentLoaded', apply);
         setTimeout(apply, 1500);
         setTimeout(hideVersionWarning, 2000); // Extra call to ensure it's hidden
+        setTimeout(fixMobileButtons, 2500); // Extra call to fix buttons after full load
+
+        // Also fix buttons on window resize
+        window.addEventListener('resize', fixMobileButtons);
     })();
 </script>
 
