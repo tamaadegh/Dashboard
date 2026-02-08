@@ -48,6 +48,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         'default_variant__image'
     ).prefetch_related(
         'images',
+        'variants',
         'translations',
         # 'translations' on ProductVariant might be needed if variants have their own translations
         'default_variant__translations', 
@@ -119,18 +120,21 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = self.filter_queryset(self.queryset)
         return self.paginate_and_serialize(queryset)
     
+    @action(detail=True, methods=['get'])
     @method_decorator(cache_page(60 * 15))
     def with_related(self, request, slug=None):
         product = self.get_object()
         serializer = self.get_serializer(product)
         return Response(serializer.data)
     
+    @action(detail=True, methods=['get'])
     @method_decorator(cache_page(60 * 15))
     def with_related_image_list(self, request, slug=None):
         product = self.get_object()
         serializer = self.get_serializer(product)
         return Response(serializer.data)
     
+    @action(detail=True, methods=['get'])
     @method_decorator(cache_page(60 * 15))
     def with_recommended(self, request, slug=None):
         product = self.get_object()
@@ -141,12 +145,14 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
     
+    @action(detail=True, methods=['get'])
     @method_decorator(cache_page(60 * 15))
     def retrive_with_image_list(self, request, slug=None):
         product = self.get_object()
         serializer = self.get_serializer(product)
         return Response(serializer.data)
     
+    @action(detail=True, methods=['get'])
     @method_decorator(cache_page(60 * 15))
     def with_recommended_image_list(self, request, slug=None):
         product = self.get_object()

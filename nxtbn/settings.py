@@ -414,7 +414,7 @@ CELERY_TASK_ALWAYS_EAGER = get_env_var("CELERY_TASK_ALWAYS_EAGER", default=False
 # Test Redis connectivity and fall back gracefully
 def _test_redis_connection(redis_url):
     """Test if Redis is reachable. Returns True if connected, False otherwise."""
-    if not redis_url or redis_url == "redis://redis:6379/1":
+    if not redis_url:
         return False
     try:
         import redis
