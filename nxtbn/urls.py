@@ -46,7 +46,63 @@ admin.site.site_header = "Tamaade Administration"
 admin.site.site_title = "Tamaade Admin Panel"
 admin.site.index_title = "Tamaade Admin"
 
+# Sentry monitoring endpoints
+def trigger_error(request):
+    """Endpoint to test Sentry error tracking"""
+    import logging
+    logger = logging.getLogger('nxtbn')
+    logger.info('Sentry debug endpoint accessed')
+    division_by_zero = 1 / 0  # This will trigger an error
+    return HttpResponse("This should never be reached")
+
+def health_check(request):
+    """Health check endpoint for monitoring"""
+    import json
+    from django.db import connection
+    from django.core.cache import cache
+    import logging
+    
+    logger = logging.getLogger('nxtbn')
+    health_status = {
+        'status': 'healthy',
+        'version': settings.VERSION,
+        'environment': getattr(settings, 'SENTRY_ENVIRONMENT', 'unknown'),
+        'checks': {}
+    }
+    
+    # Check database connectivity
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        health_status['checks']['database'] = 'ok'
+    except Exception as e:
+        health_status['checks']['database'] = f'error: {str(e)}'
+        health_status['status'] = 'unhealthy'
+        logger.error(f'Database health check failed: {str(e)}')
+    
+    # Check cache connectivity
+    try:
+        cache.set('health_check', 'ok', 10)
+        cache_value = cache.get('health_check')
+        health_status['checks']['cache'] = 'ok' if cache_value == 'ok' else 'degraded'
+    except Exception as e:
+        health_status['checks']['cache'] = f'error: {str(e)}'
+        logger.warning(f'Cache health check failed: {str(e)}')
+    
+    # Return appropriate status code
+    status_code = 200 if health_status['status'] == 'healthy' else 503
+    
+    return HttpResponse(
+        json.dumps(health_status, indent=2),
+        content_type='application/json',
+        status=status_code
+    )
+
 urlpatterns = [
+    # Monitoring endpoints
+    path('sentry-debug/', trigger_error, name='sentry_debug'),
+    path('health/', health_check, name='health_check'),
+    
     path('django-admin/', admin.site.urls),
     path('', include('nxtbn.home.urls')),
     path('', include('nxtbn.seo.urls')),

@@ -16,7 +16,7 @@ class Image(AbstractBaseModel):
         if self.image:
             url = self.image.url
             # If using Cloudinary, we can return the URL directly (or add transformations)
-            if 'cloudinary.com' in url:
+            if 'www.cloudinary.com' in url:
                 return url
             return request.build_absolute_uri(url)
         return None
@@ -24,13 +24,13 @@ class Image(AbstractBaseModel):
     def get_image_xs_url(self, request):
         if self.image_xs:
              url = self.image_xs.url
-             if 'cloudinary.com' in url:
+             if 'www.cloudinary.com' in url:
                 return url
              return request.build_absolute_uri(url)
         
-        if self.image:
+        if self.image:              
             url = self.image.url
-            if 'cloudinary.com' in url:
+            if 'www.cloudinary.com' in url:
                 # Cloudinary on-the-fly transformation for thumbnail
                 # Insert /w_200,f_auto,q_auto/ after /upload/
                 if '/upload/' in url:

@@ -26,6 +26,7 @@ from datetime import timedelta
 import sys
 from dotenv import load_dotenv
 import dj_database_url
+import sentry_sdk
 
 load_dotenv()
 
@@ -148,6 +149,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'nxtbn.core.middleware.RequestMonitoringMiddleware',  # Sentry request monitoring
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
@@ -490,3 +492,109 @@ IS_MULTI_CURRENCY = get_env_var("IS_MULTI_CURRENCY", default=True, var_type=bool
 STORE_URL = get_env_var("STORE_URL", default="http://localhost:8000")
 RESERVE_STOCK_ON_ORDER = True
 VALIDATE_STOCK_ON_ORDER = True
+
+# ============================
+# SENTRY CONFIGURATION
+# ============================
+# Determine environment for Sentry
+SENTRY_ENVIRONMENT = get_env_var("SENTRY_ENVIRONMENT", default="development" if DEBUG else "production")
+
+# Initialize Sentry SDK with comprehensive monitoring
+sentry_sdk.init(
+    dsn="https://fef2932f905848e898ad0ccf9d3b3805@o4510818177056768.ingest.de.sentry.io/4510844279521360",
+    
+    # Environment and release tracking
+    environment=SENTRY_ENVIRONMENT,
+    release=f"nxtbn@{VERSION}",  # Track releases by version
+    
+    # Add data like request headers and IP for users
+    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+    send_default_pii=True,
+    
+    # Enable sending logs to Sentry
+    enable_logs=True,
+    
+    # Performance monitoring - adjust sample rates based on environment
+    # In production, sample 20% of transactions to reduce overhead
+    # In development/staging, sample 100% for better debugging
+    traces_sample_rate=0.2 if not DEBUG else 1.0,
+    
+    # Profiling configuration
+    # Profile 10% of transactions in production, 100% in development
+    profile_session_sample_rate=0.1 if not DEBUG else 1.0,
+    profile_lifecycle="trace",  # Run profiler when there's an active transaction
+    
+    # Integrations for better monitoring
+    integrations=[
+        # Django integration is automatically enabled
+        # Add additional integrations as needed
+    ],
+    
+    # Set a before_send callback to filter or modify events before sending
+    before_send=lambda event, hint: event if not DEBUG or get_env_var("SENTRY_DEBUG_MODE", default=False, var_type=bool) else None,
+    
+    # Ignore common errors that don't need tracking
+    ignore_errors=[
+        # Add error types to ignore, e.g., KeyboardInterrupt
+    ],
+    
+    # Configure breadcrumbs (max 100 by default)
+    max_breadcrumbs=50,
+    
+    # Attach stack traces to messages
+    attach_stacktrace=True,
+)
+
+# Configure logging to work with Sentry
+import logging
+
+# Create a custom logger for application-wide logging
+logger = logging.getLogger('nxtbn')
+
+# Configure logging format
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'sentry': {
+            'class': 'sentry_sdk.integrations.logging.EventHandler',
+            'level': 'ERROR',  # Only send ERROR and above to Sentry
+        },
+    },
+    'root': {
+        'handlers': ['console', 'sentry'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'sentry'],
+            'level': get_env_var('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+        'nxtbn': {
+            'handlers': ['console', 'sentry'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        # Reduce noise from some verbose libraries
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
+}
