@@ -45,7 +45,11 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (AllowAny,)
     queryset = Product.objects.all().select_related(
         'default_variant',
-        'default_variant__image'
+        'default_variant__image',
+        'category',
+        'supplier',
+        'product_type',
+        'tax_class'
     ).prefetch_related(
         'images',
         'variants',
@@ -59,6 +63,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         drf_filters.OrderingFilter,
     ]
     filterset_class = ProductFilter
+    search_fields = ['name', 'summary', 'description', 'category__name', 'brand']
     ordering_fields = ['name', 'created_at']
     lookup_field = 'slug'
 

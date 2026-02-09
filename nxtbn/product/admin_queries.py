@@ -52,20 +52,31 @@ class ProductQuery(graphene.ObjectType):
         
     @gql_store_admin_required
     def resolve_products(root, info, **kwargs):
-        return Product.objects.all()
+        return Product.objects.select_related(
+            'category', 
+            'supplier', 
+            'product_type', 
+            'default_variant',
+            'default_variant__image'
+        ).prefetch_related(
+            'translations', 
+            'variants', 
+            'images',
+            'collections'
+        ).all()
     
 
     @gql_store_admin_required
     def resolve_collection(root, info, id):
 
         try:
-            return Collection.objects.get(pk=id)
+            return Collection.objects.prefetch_related('translations').get(pk=id)
         except Collection.DoesNotExist:
             return None
     
     @gql_store_admin_required
     def resolve_collections(root, info, **kwargs):
-        return Collection.objects.all()
+        return Collection.objects.prefetch_related('translations').all()
     
     @gql_store_admin_required
     def resolve_producttag(root, info, id):
@@ -90,23 +101,24 @@ class ProductQuery(graphene.ObjectType):
     
     @gql_store_admin_required
     def resolve_suppliers(root, info, **kwargs):
-        return Product.objects.all()
+        return Supplier.objects.prefetch_related('translations').all()
     
     @gql_store_admin_required
     def resolve_product_variants(root, info, **kwargs):
-        return Product.objects.all()
+        from nxtbn.product.models import ProductVariant # Ensure import if not available, though it is at top
+        return ProductVariant.objects.select_related('product', 'product__default_variant').all()
     
     @gql_store_admin_required
     def resolve_category(root, info, id):
 
         try:
-            return Category.objects.get(pk=id)
+            return Category.objects.select_related('parent').prefetch_related('translations', 'subcategories').get(pk=id)
         except Category.DoesNotExist:
             return None
     
     @gql_store_admin_required
     def resolve_categories(root, info, **kwargs):
-        return Category.objects.all()
+        return Category.objects.select_related('parent').prefetch_related('translations', 'subcategories').all()
         
     # All translations
     @gql_store_admin_required

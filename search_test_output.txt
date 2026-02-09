@@ -1,0 +1,7 @@
+Fetching all products...
+Total products: 6
+Testing search with term: 'Product'
+GET http://localhost:8000/product/storefront/api/products/?search=Product
+Search results count: 0
+Verified 0/0 items contain 'Product' in name.
+Success: Search successfully filtered the results.
