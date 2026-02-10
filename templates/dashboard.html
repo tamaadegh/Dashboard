@@ -158,6 +158,13 @@
                 width: 100% !important;
                 margin: 0 !important;
             }
+
+            /* Fix for specific button containers like the one in screenshot */
+            [class*="flex-col-reverse"] {
+                position: relative !important;
+                z-index: 1000 !important;
+                pointer-events: auto !important;
+            }
         }
 
         /* Additional fixes for very small screens */
@@ -315,11 +322,10 @@
                     }
 
                     // Add touch event listeners to ensure responsiveness
+                    // REMOVED stopPropagation as it interferes with React event delegation
                     if (!btn.hasAttribute('data-mobile-fixed')) {
-                        btn.addEventListener('touchstart', function (e) {
-                            // Prevent any parent elements from blocking the touch
-                            e.stopPropagation();
-                        }, { passive: true });
+                        // Ensure z-index is high enough
+                        btn.style.zIndex = '9999';
 
                         btn.setAttribute('data-mobile-fixed', 'true');
                     }
