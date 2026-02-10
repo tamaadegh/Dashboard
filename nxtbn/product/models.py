@@ -184,6 +184,12 @@ class Product(PublishableModel, AbstractMetadata, AbstractSEOModel):
 
     class Meta:
         ordering = ('name',)
+        indexes = [
+            models.Index(fields=['name']),
+            models.Index(fields=['brand']),
+            models.Index(fields=['is_live']),
+            models.Index(fields=['created_at']),
+        ]
 
     def description_html(self):
         return json_to_html(self.description)
@@ -426,8 +432,10 @@ class ProductVariant(MonetaryMixin, AbstractUUIDModel, AbstractMetadata, models.
             full_url = request.build_absolute_uri(image_url)
             return full_url
         
-        if self.product.images.exists():
-            first_image = self.product.images.first()
+        # Use .all() to leverage prefetch_related cache if available
+        images = self.product.images.all()
+        if images:
+            first_image = images[0]
             if first_image and hasattr(first_image, 'image') and first_image.image:
                 image_url = first_image.image.url
                 if 'cloudinary.com' in image_url:
@@ -456,8 +464,10 @@ class ProductVariant(MonetaryMixin, AbstractUUIDModel, AbstractMetadata, models.
                     return image_url.replace('/upload/', '/upload/w_200,f_auto,q_auto/')
                  return image_url
         
-        if self.product.images.exists():
-            first_image = self.product.images.first()
+        # Use .all() to leverage prefetch_related cache if available
+        images = self.product.images.all()
+        if images:
+            first_image = images[0]
             if first_image and hasattr(first_image, 'image') and first_image.image:
                 image_url = first_image.image.url
                 if 'cloudinary.com' in image_url:
@@ -487,6 +497,9 @@ class ProductVariant(MonetaryMixin, AbstractUUIDModel, AbstractMetadata, models.
 
     class Meta:
         ordering = ('price',)  # Order by price ascending
+        indexes = [
+            models.Index(fields=['price']),
+        ]
     
     def save(self, *args, **kwargs):
         self.validate_amount()

@@ -55,7 +55,8 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         'variants',
         'translations',
         # 'translations' on ProductVariant might be needed if variants have their own translations
-        'default_variant__translations', 
+        'default_variant__translations',
+        'related_to', 
     )
     filter_backends = [
         django_filters.rest_framework.DjangoFilterBackend,
@@ -66,6 +67,13 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['name', 'summary', 'description', 'category__name', 'brand']
     ordering_fields = ['name', 'created_at']
     lookup_field = 'slug'
+
+    def get_queryset(self):
+        queryset = self.queryset
+        # Defer heavy fields for list views to save memory and I/O
+        if self.action in ['list', 'withvariant', 'with_recommended', 'with_recommended_image_list']:
+            queryset = queryset.defer('description', 'metadata', 'internal_metadata')
+        return queryset
 
     @method_decorator(cache_page(60 * 15)) # Cache for 15 minutes
     def list(self, request, *args, **kwargs):
@@ -139,15 +147,38 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(product)
         return Response(serializer.data)
     
+    def _get_recommended_products(self, product):
+        """
+        Helper to fetch recommended products efficiently.
+        1. Get IDs via TrigramSimilarity (lightweight query).
+        2. Fetch full objects via configured queryset (heavyweight with prefetch).
+        3. Preserve similarity order in Python.
+        """
+        # 1. Get IDs only
+        similar_ids = list(Product.objects.annotate(
+            similarity=TrigramSimilarity('name', product.name)
+        ).order_by('-similarity').values_list('id', flat=True)[:20])
+
+        if not similar_ids:
+            return []
+
+        # 2. Fetch full objects using the optimized queryset (with select_related/prefetch_related)
+        # This prevents N+1 queries when accessing related fields in serializers
+        recommended_products = list(self.get_queryset().filter(id__in=similar_ids))
+
+        # 3. Sort in Python to match the Trigram order
+        # Create a map for O(1) lookup
+        product_map = {p.id: p for p in recommended_products}
+        ordered_products = [product_map[pid] for pid in similar_ids if pid in product_map]
+        
+        return ordered_products
+
     @action(detail=True, methods=['get'])
     @method_decorator(cache_page(60 * 15))
     def with_recommended(self, request, slug=None):
         product = self.get_object()
-        queryset = Product.objects.annotate(
-            similarity=TrigramSimilarity('name', product.name)
-        ).order_by('-similarity')[:20]
-
-        serializer = self.get_serializer(queryset, many=True)
+        ordered_products = self._get_recommended_products(product)
+        serializer = self.get_serializer(ordered_products, many=True)
         return Response(serializer.data)
     
     @action(detail=True, methods=['get'])
@@ -161,17 +192,14 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     @method_decorator(cache_page(60 * 15))
     def with_recommended_image_list(self, request, slug=None):
         product = self.get_object()
-        queryset = Product.objects.annotate(
-            similarity=TrigramSimilarity('name', product.name)
-        ).order_by('-similarity')[:20]
-
-        serializer = self.get_serializer(queryset, many=True)
+        ordered_products = self._get_recommended_products(product)
+        serializer = self.get_serializer(ordered_products, many=True)
         return Response(serializer.data)
     
 class CollectionListView(generics.ListAPIView):
     permission_classes = (AllowAny,)
     pagination_class = None
-    queryset = Collection.objects.filter(is_active=True)
+    queryset = Collection.objects.filter(is_active=True).select_related('image')
     serializer_class = CollectionSerializer
 
     @method_decorator(cache_page(60 * 60))
@@ -181,7 +209,11 @@ class CollectionListView(generics.ListAPIView):
 class CategoryListView(generics.ListAPIView):
     permission_classes = (AllowAny,)
     pagination_class = None
-    queryset = Category.objects.all()
+    # Optimize recursive fetching: prefetch children up to depth 2 (as enforced by model)
+    queryset = Category.objects.all().prefetch_related(
+        'subcategories',
+        'subcategories__subcategories'
+    )
     serializer_class = CategorySerializer
 
     @method_decorator(cache_page(60 * 60))
