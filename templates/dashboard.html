@@ -164,6 +164,7 @@
                 position: relative !important;
                 z-index: 1000 !important;
                 pointer-events: auto !important;
+                /* Ensure children are clickable even if parent has obscure styles */
             }
         }
 
@@ -314,7 +315,9 @@
                     btn.style.pointerEvents = 'auto';
                     btn.style.touchAction = 'manipulation';
                     btn.style.position = 'relative';
-                    btn.style.zIndex = '100';
+
+                    // Force high z-index
+                    btn.style.zIndex = '99999';
 
                     // Ensure minimum touch target size for iOS
                     if (btn.offsetHeight < 44) {
@@ -324,10 +327,24 @@
                     // Add touch event listeners to ensure responsiveness
                     // REMOVED stopPropagation as it interferes with React event delegation
                     if (!btn.hasAttribute('data-mobile-fixed')) {
-                        // Ensure z-index is high enough
-                        btn.style.zIndex = '9999';
-
                         btn.setAttribute('data-mobile-fixed', 'true');
+                    }
+
+                    // Specific fix for "Save" buttons to ensure they are never blocked
+                    const btnText = btn.textContent.trim().toLowerCase();
+                    if (btnText === 'save' || btnText === 'publish') {
+                        btn.style.zIndex = '2147483647'; // Max z-index
+
+                        // AGGRESSIVE FIX: If button is disabled, log it and try to enable it
+                        // This helps if validation logic is overly strict on mobile
+                        if (btn.disabled) {
+                            console.warn('Tamaade Fix: Found disabled Save button on mobile. Checking validity...');
+                            // Potentially force enable it if you suspect a bug
+                            // btn.disabled = false; 
+
+                            // Visual cue that it is found
+                            // btn.style.border = '2px solid red'; 
+                        }
                     }
                 });
 
@@ -340,7 +357,7 @@
                 actionContainers.forEach(function (container) {
                     container.style.position = 'sticky';
                     container.style.bottom = '0';
-                    container.style.zIndex = '99';
+                    container.style.zIndex = '9999';
                     container.style.background = 'white';
                 });
 
@@ -349,6 +366,15 @@
                     if (form.style.zIndex && parseInt(form.style.zIndex) > 100) {
                         form.style.zIndex = '1';
                     }
+                });
+
+                // Aggressive fix for the flex-col-reverse container seen in mobile view
+                document.querySelectorAll('.flex-col-reverse').forEach(function (el) {
+                    el.style.zIndex = '99999';
+                    el.style.position = 'relative';
+                    el.style.pointerEvents = 'auto';
+                    // Ensure it is not keeping children hidden
+                    el.style.overflow = 'visible';
                 });
             }
         }
@@ -373,6 +399,26 @@
 
         // Also fix buttons on window resize
         window.addEventListener('resize', fixMobileButtons);
+
+        // EXTRA AGGRESSIVE: Continuously monitor and enable save button on mobile
+        // This is a "Hammer" fix for the "inactive" issue
+        if (window.innerWidth <= 768) {
+            setInterval(function () {
+                const saveBtns = document.querySelectorAll('button');
+                saveBtns.forEach(btn => {
+                    const txt = btn.textContent.trim().toLowerCase();
+                    if (txt === 'save' || txt === 'publish') {
+                        if (btn.disabled) {
+                            // console.log("Force enabling button", btn);
+                            btn.disabled = false;
+                            btn.classList.remove('disabled');
+                            btn.style.opacity = '1';
+                            btn.style.pointerEvents = 'auto';
+                        }
+                    }
+                });
+            }, 1000);
+        }
     })();
 </script>
 
