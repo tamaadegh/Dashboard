@@ -368,13 +368,35 @@
                     }
                 });
 
-                // Aggressive fix for the flex-col-reverse container seen in mobile view
+                // Aggressive fix for the flex-col-reverse container (Action Bar)
                 document.querySelectorAll('.flex-col-reverse').forEach(function (el) {
-                    el.style.zIndex = '99999';
-                    el.style.position = 'relative';
-                    el.style.pointerEvents = 'auto';
-                    // Ensure it is not keeping children hidden
-                    el.style.overflow = 'visible';
+                    // Only apply high z-index if it looks like an action bar (has buttons)
+                    if (el.querySelector('button')) {
+                        el.style.zIndex = '99999';
+                        el.style.position = 'relative';
+                        el.style.pointerEvents = 'auto';
+                        el.style.overflow = 'visible';
+                    }
+                });
+
+                // Fix: Ensure file inputs are accessible
+                document.querySelectorAll('input[type="file"]').forEach(function (input) {
+                    input.style.zIndex = '2147483647'; // Max z-index
+                    input.style.position = 'relative';
+                    input.style.pointerEvents = 'auto';
+
+                    // Also ensure parent label is clickable if it wraps the input
+                    if (input.parentElement && input.parentElement.tagName === 'LABEL') {
+                        input.parentElement.style.zIndex = '2147483647';
+                        input.parentElement.style.position = 'relative';
+                    }
+                });
+
+                // Fix: Ensure Dropzone areas are accessible
+                document.querySelectorAll('[role="presentation"], .dropzone, [class*="dropzone"]').forEach(function (dz) {
+                    dz.style.zIndex = '100000'; // Make sure this is above the action bar if they overlap
+                    dz.style.position = 'relative';
+                    dz.style.pointerEvents = 'auto';
                 });
             }
         }
